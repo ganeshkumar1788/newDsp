@@ -13,6 +13,9 @@ from sqlalchemy import select, func as sa_func
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.spatial import geojson_to_spatial, spatial_to_geojson
+from app.core.access import (
+    ensure_can_mutate, ensure_admin, ensure_field_access, farmer_scope_id
+)
 from app.models.field import Field
 from app.models.user import User
 from app.schemas.field import (
@@ -34,6 +37,7 @@ def create_field(
     Create a new field boundary. Calculated area is provided by the client,
     and the geometry boundary is specified as GeoJSON MultiPolygon.
     """
+    ensure_can_mutate(current_user)
     data = payload.model_dump()
     geojson_boundary = data.pop("boundary")
     
@@ -67,12 +71,17 @@ def list_fields(
 ):
     """
     Retrieve a paginated list of fields. Optionally filter by project or farmer.
+    Farmers receive only their own farm data, filtered by owner id on the server.
     """
     query = db.query(Field)
+    if current_user.role == "farmer":
+        fid = farmer_scope_id(db, current_user)
+        query = query.filter(Field.farmer_id == fid)
+    elif farmer_id:
+        query = query.filter(Field.farmer_id == farmer_id)
+        
     if project_id:
         query = query.filter(Field.project_id == project_id)
-    if farmer_id:
-        query = query.filter(Field.farmer_id == farmer_id)
     
     total = query.count()
     fields = query.offset(skip).limit(limit).all()
@@ -100,6 +109,7 @@ def get_field(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Field with ID '{field_id}' not found."
         )
+    ensure_field_access(db, current_user, field)
     return field
 
 
@@ -113,12 +123,14 @@ def update_field(
     """
     Update field properties, including metadata or boundaries.
     """
+    ensure_can_mutate(current_user)
     field = db.get(Field, field_id)
     if not field:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Field with ID '{field_id}' not found."
         )
+    ensure_field_access(db, current_user, field)
         
     update_data = payload.model_dump(exclude_unset=True)
     
@@ -147,8 +159,9 @@ def delete_field(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Delete a field.
+    Delete a field. Requires admin role.
     """
+    ensure_admin(current_user)
     field = db.get(Field, field_id)
     if not field:
         raise HTTPException(
@@ -180,6 +193,7 @@ def get_field_boundary(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Field with ID '{field_id}' not found."
         )
+    ensure_field_access(db, current_user, field)
     return spatial_to_geojson(field.boundary)
 
 
@@ -193,12 +207,14 @@ def update_field_boundary(
     """
     Update/replace the field boundary geometry coordinates using a GeoJSON MultiPolygon.
     """
+    ensure_can_mutate(current_user)
     field = db.get(Field, field_id)
     if not field:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Field with ID '{field_id}' not found."
         )
+    ensure_field_access(db, current_user, field)
         
     try:
         field.boundary = geojson_to_spatial(payload)
@@ -222,13 +238,9 @@ def verify_field(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Approve or reject a mapped field boundary. Requires verifier or admin role.
+    Approve or reject a mapped field boundary. Requires admin role.
     """
-    if current_user.role not in ("verifier", "admin"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only verifiers and admins can verify fields."
-        )
+    ensure_admin(current_user)
     
     field = db.get(Field, field_id)
     if not field:

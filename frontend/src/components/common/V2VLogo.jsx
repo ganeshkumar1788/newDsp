@@ -1,15 +1,23 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useNavigateWithLoader } from '../../contexts/NavigationLoaderContext'
 
 /**
  * V2V Tech Official Logo Component
  * Uses the official 3D glossy purple bulb (/images/v2v-icon.png)
  * and high-contrast, crystal-clear "V2V Tech — Vision To Value" typography.
- * Clicking the logo navigates to the active portal/dashboard without login flash,
- * showing the brand PageTransitionLoader.
+ * Clicking the logo navigates smoothly to that user's role-based dashboard/home
+ * with no page reload and no flash of the login page.
  */
 export default function V2VLogo({ size = 'md', variant = 'full', className = '', onClick }) {
-  const { navigateHomeWithLoader } = useNavigateWithLoader()
+  const navigate = useNavigate()
+  let loaderNav = null
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    loaderNav = useNavigateWithLoader()
+  } catch {
+    loaderNav = null
+  }
   const isLight = variant === 'light'
   
   const sizeMap = {
@@ -27,23 +35,25 @@ export default function V2VLogo({ size = 'md', variant = 'full', className = '',
       onClick(e)
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' })
-      navigateHomeWithLoader('Opening Dashboard...', 1200)
+      if (loaderNav?.navigateHome) {
+        loaderNav.navigateHome()
+      } else {
+        const pathname = window.location.pathname || ''
+        if (pathname.startsWith('/consumer') || pathname === '/marketplace') {
+          navigate('/marketplace')
+        } else if (pathname.startsWith('/dealer')) {
+          navigate('/dealer')
+        } else {
+          navigate('/marketplace')
+        }
+      }
     }
   }
 
   return (
     <div
       onClick={handleClick}
-      role="link"
-      tabIndex={0}
-      aria-label="Go to home"
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          handleClick(e)
-        }
-      }}
-      className={`inline-flex items-center gap-3 select-none group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-v2v-purple rounded-xl p-1 transition-all ${className}`}
+      className={`inline-flex items-center gap-3 select-none group cursor-pointer ${className}`}
     >
       {/* 3D Glossy Purple Bulb Icon */}
       <div className="relative flex-shrink-0">

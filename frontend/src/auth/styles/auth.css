@@ -1,0 +1,727 @@
+/* ==========================================================================
+   AgriMap DSP & V2V Tech — Unified Design System & Auth Styles
+   Derived from FarmXT and tailored strictly to Reference Images 1 & 2.
+   Color Standard:
+     Deep purple:    #35105F
+     Primary violet: #6530A0
+     Accent violet:  #8A50C1
+     Background:     #F5F3FA
+     Border:         #E7E0F0
+     Main text:      #25143E
+     Secondary text: #82758F
+   ========================================================================== */
+
+:root {
+  --v2v-font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --v2v-display-font: 'Poppins', 'Inter', system-ui, sans-serif;
+
+  /* Reference Design Colors */
+  --v2v-deep-purple: #35105F;
+  --v2v-primary-violet: #6530A0;
+  --v2v-accent-violet: #8A50C1;
+  --v2v-bg-lavender: #F5F3FA;
+  --v2v-border-subtle: #E7E0F0;
+  --v2v-text-main: #25143E;
+  --v2v-text-secondary: #82758F;
+  --v2v-card-bg: #FFFFFF;
+
+  --v2v-radius-sm: 8px;
+  --v2v-radius-md: 12px;
+  --v2v-radius-lg: 18px;
+  --v2v-radius-xl: 24px;
+
+  --v2v-shadow-card: 0 10px 30px -5px rgba(53, 16, 95, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  --v2v-shadow-elevated: 0 20px 40px -10px rgba(53, 16, 95, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.04);
+  --v2v-gradient-btn: linear-gradient(135deg, #35105F 0%, #6530A0 100%);
+  --v2v-gradient-panel: linear-gradient(135deg, #35105F 0%, #25143E 45%, #6530A0 100%);
+}
+
+/* Page Scaffolding */
+.agrimap-auth-page {
+  font-family: var(--v2v-font-family);
+  background-color: var(--v2v-bg-lavender);
+  color: var(--v2v-text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .agrimap-auth-page {
+    padding: 1rem 1rem;
+  }
+}
+
+/* Top Nav Header */
+.agrimap-auth-header {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+}
+
+.agrimap-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.agrimap-brand-icon-wrap {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agrimap-brand-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(101, 48, 160, 0.25));
+}
+
+.agrimap-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.agrimap-brand-title {
+  font-family: var(--v2v-display-font);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--v2v-deep-purple);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.agrimap-brand-sub {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v2v-primary-violet);
+  margin-top: 1px;
+}
+
+.agrimap-header-support {
+  font-size: 0.875rem;
+  color: var(--v2v-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.agrimap-support-link {
+  color: var(--v2v-primary-violet);
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.agrimap-support-link:hover {
+  color: var(--v2v-deep-purple);
+  text-decoration: underline;
+}
+
+/* Centered Login Card (Reference Image 2) */
+.agrimap-login-container {
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+  padding: 1.5rem 0;
+}
+
+.agrimap-login-card {
+  background-color: var(--v2v-card-bg);
+  border: 1px solid var(--v2v-border-subtle);
+  border-radius: var(--v2v-radius-xl);
+  box-shadow: var(--v2v-shadow-card);
+  padding: 2.5rem 2.5rem 2.25rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .agrimap-login-card {
+    padding: 1.75rem 1.5rem;
+  }
+}
+
+.agrimap-card-title {
+  font-family: var(--v2v-display-font);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--v2v-text-main);
+  letter-spacing: -0.025em;
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
+.agrimap-card-subtitle {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--v2v-text-secondary);
+  margin: 0 0 1.75rem;
+}
+
+/* Form Styles */
+.agrimap-form-group {
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.agrimap-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v2v-text-main);
+  margin-bottom: 0.45rem;
+}
+
+.agrimap-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #FFFFFF;
+  border: 1px solid var(--v2v-border-subtle);
+  border-radius: var(--v2v-radius-md);
+  transition: all 0.2s ease;
+}
+
+.agrimap-input-wrapper:focus-within {
+  border-color: var(--v2v-primary-violet);
+  box-shadow: 0 0 0 3px rgba(101, 48, 160, 0.15);
+}
+
+.agrimap-input-icon-left {
+  position: absolute;
+  left: 0.95rem;
+  color: var(--v2v-text-secondary);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.agrimap-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 1rem 0 2.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--v2v-text-main);
+  background: transparent;
+  border: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.agrimap-input::placeholder {
+  color: #B5AFC2;
+}
+
+.agrimap-input-icon-right {
+  position: absolute;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.agrimap-btn-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--v2v-text-secondary);
+  padding: 0.35rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.agrimap-btn-icon:hover {
+  color: var(--v2v-primary-violet);
+}
+
+.agrimap-forgot-link {
+  font-size: 0.78125rem;
+  font-weight: 600;
+  color: var(--v2v-primary-violet);
+  text-decoration: none;
+  margin-top: 0.45rem;
+  align-self: flex-end;
+  transition: color 0.15s ease;
+}
+
+.agrimap-forgot-link:hover {
+  color: var(--v2v-deep-purple);
+  text-decoration: underline;
+}
+
+/* Primary Action Button */
+.agrimap-btn-submit {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: var(--v2v-radius-md);
+  background: var(--v2v-gradient-btn);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  margin-top: 0.75rem;
+  box-shadow: 0 4px 12px rgba(53, 16, 95, 0.2);
+  transition: all 0.2s ease;
+}
+
+.agrimap-btn-submit:hover:not(:disabled) {
+  opacity: 0.95;
+  box-shadow: 0 6px 18px rgba(53, 16, 95, 0.28);
+  transform: translateY(-1px);
+}
+
+.agrimap-btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.agrimap-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Switch Text */
+.agrimap-switch-row {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--v2v-text-secondary);
+}
+
+.agrimap-switch-link {
+  font-weight: 700;
+  color: var(--v2v-text-main);
+  text-decoration: none;
+  margin-left: 0.25rem;
+  transition: color 0.15s ease;
+}
+
+.agrimap-switch-link:hover {
+  color: var(--v2v-primary-violet);
+  text-decoration: underline;
+}
+
+/* Security / Trust Footer */
+.agrimap-security-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.78125rem;
+  color: var(--v2v-text-secondary);
+  text-align: center;
+  padding: 1.25rem 0 0.5rem;
+}
+
+.agrimap-security-icon {
+  color: var(--v2v-accent-violet);
+  flex-shrink: 0;
+}
+
+/* Split-Panel Registration (Reference Image 1) */
+.agrimap-register-container {
+  width: 100%;
+  max-width: 980px;
+  margin: auto;
+  padding: 1.5rem 0;
+}
+
+.agrimap-split-card {
+  background-color: var(--v2v-card-bg);
+  border: 1px solid var(--v2v-border-subtle);
+  border-radius: var(--v2v-radius-xl);
+  box-shadow: var(--v2v-shadow-elevated);
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .agrimap-split-card {
+    grid-template-columns: 5fr 7fr;
+    min-height: 640px;
+  }
+}
+
+/* Left Hero Panel */
+.agrimap-hero-panel {
+  background: var(--v2v-gradient-panel);
+  color: #FFFFFF;
+  padding: 2.75rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative subtle background shapes */
+.agrimap-hero-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image: radial-gradient(circle at 1px 1px, #FFFFFF 1px, transparent 0);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.agrimap-hero-glow {
+  position: absolute;
+  top: -20%;
+  right: -20%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(138, 80, 193, 0.4) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.agrimap-ecosystem-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #FFFFFF;
+  backdrop-filter: blur(8px);
+}
+
+.agrimap-hero-heading {
+  font-family: var(--v2v-display-font);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  margin: 1.5rem 0 0.85rem;
+  color: #FFFFFF;
+}
+
+.agrimap-hero-desc {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.agrimap-hero-footer {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 2rem;
+  letter-spacing: 0.02em;
+}
+
+/* Right Form Panel */
+.agrimap-form-panel {
+  padding: 2.5rem 2.5rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .agrimap-form-panel {
+    padding: 1.75rem 1.25rem;
+  }
+}
+
+.agrimap-step-tag {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v2v-primary-violet);
+  margin-bottom: 0.45rem;
+  display: block;
+}
+
+/* Role Selector Cards */
+.agrimap-role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 540px) {
+  .agrimap-role-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.agrimap-role-card {
+  background: #FFFFFF;
+  border: 1.5px solid var(--v2v-border-subtle);
+  border-radius: var(--v2v-radius-md);
+  padding: 0.85rem 0.65rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.agrimap-role-card:hover {
+  border-color: var(--v2v-primary-violet);
+  background-color: #FAF8FD;
+}
+
+.agrimap-role-card--active {
+  border-color: var(--v2v-primary-violet);
+  background-color: #F6F1FC;
+  box-shadow: 0 0 0 2px rgba(101, 48, 160, 0.18);
+}
+
+.agrimap-role-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #F3EDFB;
+  color: var(--v2v-primary-violet);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.agrimap-role-card--active .agrimap-role-icon {
+  background: var(--v2v-primary-violet);
+  color: #FFFFFF;
+}
+
+.agrimap-role-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--v2v-text-main);
+}
+
+.agrimap-role-badge {
+  font-size: 0.6875rem;
+  color: var(--v2v-text-secondary);
+  line-height: 1.2;
+}
+
+/* Inline Alert */
+.agrimap-alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--v2v-radius-md);
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.agrimap-alert--error {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+.agrimap-alert--success {
+  background-color: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #166534;
+}
+
+/* Spinner */
+.agrimap-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: agrimap-spin 0.7s linear infinite;
+}
+
+@keyframes agrimap-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ────────────────────────────────────────────────────────── */
+/* Strict Fidelity Override: Ensure Reference Design Colors   */
+/* Immune to ambient dark mode overrides on authentication    */
+/* ────────────────────────────────────────────────────────── */
+html.dark .agrimap-auth-page,
+body.dark .agrimap-auth-page,
+.agrimap-auth-page {
+  background-color: #F5F3FA !important;
+  color: #25143E !important;
+}
+
+html.dark .agrimap-login-container,
+html.dark .agrimap-register-container,
+.agrimap-login-container,
+.agrimap-register-container {
+  background-color: transparent !important;
+}
+
+html.dark .agrimap-auth-header,
+.agrimap-auth-header {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+html.dark .agrimap-login-card,
+.agrimap-login-card {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E7E0F0 !important;
+  color: #25143E !important;
+  box-shadow: 0 10px 30px -5px rgba(53, 16, 95, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
+}
+
+html.dark .agrimap-split-card,
+.agrimap-split-card {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E7E0F0 !important;
+  box-shadow: 0 20px 40px -10px rgba(53, 16, 95, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.04) !important;
+}
+
+html.dark .agrimap-form-panel,
+.agrimap-form-panel {
+  background-color: #FFFFFF !important;
+}
+
+html.dark .agrimap-input-wrapper,
+.agrimap-input-wrapper {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E7E0F0 !important;
+}
+
+html.dark .agrimap-input,
+.agrimap-input {
+  background-color: transparent !important;
+  color: #25143E !important;
+}
+
+html.dark .agrimap-input::placeholder,
+.agrimap-input::placeholder {
+  color: #B5AFC2 !important;
+}
+
+html.dark .agrimap-card-title,
+.agrimap-card-title {
+  color: #25143E !important;
+}
+
+html.dark .agrimap-card-subtitle,
+.agrimap-card-subtitle {
+  color: #82758F !important;
+}
+
+html.dark .agrimap-label,
+.agrimap-label {
+  color: #35105F !important;
+}
+
+html.dark .agrimap-brand-title,
+.agrimap-brand-title {
+  color: #35105F !important;
+}
+
+html.dark .agrimap-brand-sub,
+.agrimap-brand-sub {
+  color: #6530A0 !important;
+}
+
+html.dark .agrimap-header-support,
+.agrimap-header-support {
+  color: #82758F !important;
+}
+
+html.dark .agrimap-support-link,
+.agrimap-support-link {
+  color: #6530A0 !important;
+}
+
+html.dark .agrimap-forgot-link,
+.agrimap-forgot-link {
+  color: #6530A0 !important;
+}
+
+html.dark .agrimap-btn-submit,
+.agrimap-btn-submit {
+  background: linear-gradient(135deg, #35105F 0%, #6530A0 100%) !important;
+  color: #FFFFFF !important;
+}
+
+html.dark .agrimap-switch-row,
+.agrimap-switch-row {
+  color: #82758F !important;
+}
+
+html.dark .agrimap-switch-link,
+.agrimap-switch-link {
+  color: #25143E !important;
+}
+
+html.dark .agrimap-security-footer,
+.agrimap-security-footer {
+  color: #82758F !important;
+}
+
+html.dark .agrimap-role-card,
+.agrimap-role-card {
+  background-color: #FFFFFF !important;
+  border-color: #E7E0F0 !important;
+}
+
+html.dark .agrimap-role-card:hover,
+.agrimap-role-card:hover {
+  background-color: #FAF8FD !important;
+  border-color: #6530A0 !important;
+}
+
+html.dark .agrimap-role-card--active,
+.agrimap-role-card--active {
+  background-color: #F6F1FC !important;
+  border-color: #6530A0 !important;
+}
+
+html.dark .agrimap-role-title,
+.agrimap-role-title {
+  color: #25143E !important;
+}
+
+html.dark .agrimap-role-badge,
+.agrimap-role-badge {
+  color: #82758F !important;
+}
+

@@ -94,6 +94,9 @@ export const farmStorage = {
     const farmers = farmStorage.getFarmers()
     const id = farmerData.id || `farmer-${Date.now()}`
     const fieldId = farmerData.field_id || `field-${Date.now()}`
+    const baseLat = farmerData.location?.lat || 10.6585
+    const baseLng = farmerData.location?.lng || 77.0125
+
     const newFarmer = {
       id,
       field_id: fieldId,
@@ -103,6 +106,7 @@ export const farmStorage = {
       sensors_count: 2,
       readiness_score: 9.0,
       power_status: '3-Phase Grid (Active)',
+      centroid: [baseLat, baseLng],
       ...farmerData,
     }
     const updated = [newFarmer, ...farmers]
@@ -112,6 +116,32 @@ export const farmStorage = {
     const key = STORAGE_KEYS.GEOJSON_PREFIX + fieldId
     const existing = localStorage.getItem(key)
     if (!existing) {
+      const polyCoords = farmerData.location
+        ? [
+            [
+              [
+                [baseLng - 0.0025, baseLat - 0.0020],
+                [baseLng + 0.0028, baseLat - 0.0015],
+                [baseLng + 0.0035, baseLat + 0.0023],
+                [baseLng + 0.0001, baseLat + 0.0033],
+                [baseLng - 0.0029, baseLat + 0.0013],
+                [baseLng - 0.0025, baseLat - 0.0020],
+              ]
+            ]
+          ]
+        : [
+            [
+              [
+                [77.0102, 10.6565],
+                [77.0155, 10.6570],
+                [77.0162, 10.6608],
+                [77.0128, 10.6618],
+                [77.0098, 10.6598],
+                [77.0102, 10.6565],
+              ]
+            ]
+          ]
+
       const starterGeoJSON = {
         type: 'FeatureCollection',
         features: [
@@ -119,18 +149,7 @@ export const farmStorage = {
             type: 'Feature',
             geometry: {
               type: 'MultiPolygon',
-              coordinates: [
-                [
-                  [
-                    [77.0102, 10.6565],
-                    [77.0155, 10.6570],
-                    [77.0162, 10.6608],
-                    [77.0128, 10.6618],
-                    [77.0098, 10.6598],
-                    [77.0102, 10.6565],
-                  ]
-                ]
-              ]
+              coordinates: polyCoords,
             },
             properties: {
               entity_type: 'field',
@@ -147,7 +166,7 @@ export const farmStorage = {
           // Default initial borewell
           {
             type: 'Feature',
-            geometry: { type: 'Point', coordinates: [77.0118, 10.6578] },
+            geometry: { type: 'Point', coordinates: [baseLng + 0.0005, baseLat + 0.0005] },
             properties: {
               entity_type: 'resource',
               id: `res-bw-${Date.now()}`,
@@ -167,7 +186,7 @@ export const farmStorage = {
           // Default initial CCTV
           {
             type: 'Feature',
-            geometry: { type: 'Point', coordinates: [77.0121, 10.6580] },
+            geometry: { type: 'Point', coordinates: [baseLng + 0.0008, baseLat + 0.0008] },
             properties: {
               entity_type: 'device',
               id: `cctv-${Date.now()}`,
@@ -337,36 +356,20 @@ export const farmStorage = {
 
   // ── FARM-XT Pending Farmer Registrations & Admin Approval ─────────────────
   getPendingFarmerRegistrations: () => {
-    const defaultPending = [
-      {
-        id: 'pending-reg-01',
-        full_name: 'Pravin Solanki',
-        age: 42,
-        area_region: 'Anand Rural, Gujarat',
-        contact_number: '+91 98251 77123',
-        land_address: 'Survey No. 89/2, Borsad Road, Anand',
-        area_sq_acres: '14.5 Acres',
-        crops_yield: ['Bt Cotton', 'Hybrid Maize', 'Groundnut'],
-        role: 'farmer',
-        status: 'pending_admin_approval',
-        submitted_at: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        id: 'pending-reg-02',
-        full_name: 'Bhupendra Chaudhary',
-        age: 38,
-        area_region: 'Vadodara Agro Belt',
-        contact_number: '+91 97120 44890',
-        land_address: 'Plot 14B, Dabhoi Highway, Vadodara',
-        area_sq_acres: '22.0 Acres',
-        crops_yield: ['Basmati Rice (Paddy)', 'Drip Sugarcane'],
-        role: 'farmer',
-        status: 'pending_admin_approval',
-        submitted_at: new Date(Date.now() - 18000000).toISOString(),
-      }
-    ]
-    const list = getStoredOrInit('farmxt_pending_farmers_v1', defaultPending)
-    return Array.isArray(list) ? list : []
+    const raw = getStoredOrInit('farmxt_pending_farmers_v1', [])
+    // Filter out fake demo registrations (Ramesh Patel, Venkatesh Rao, etc.)
+    const realOnly = (Array.isArray(raw) ? raw : []).filter(item => 
+      item.id !== 'pending-farmer-101' && 
+      item.id !== 'pending-farmer-102' &&
+      item.full_name !== 'Ramesh Patel' &&
+      item.full_name !== 'Venkatesh Rao'
+    )
+    if (realOnly.length !== (Array.isArray(raw) ? raw.length : 0)) {
+      try {
+        localStorage.setItem('farmxt_pending_farmers_v1', JSON.stringify(realOnly))
+      } catch { /* ignore */ }
+    }
+    return realOnly
   },
 
   createPendingFarmerRegistration: (data) => {
@@ -491,30 +494,6 @@ export const farmStorage = {
         created_at: new Date(Date.now() - 172800000).toISOString(),
         last_login_at: new Date(Date.now() - 600000).toISOString(),
         is_online: true,
-      },
-      {
-        email: 'verifier@v2vtech.com',
-        password: 'verifier123',
-        role: 'verifier',
-        full_name: 'V2V Cadastral Land Verifier',
-        contact_number: '+91 94431 55210',
-        area_place: 'Salem & Coimbatore, Tamil Nadu',
-        specialization: 'Cadastral Boundary Verification',
-        license_number: 'V2V-VERIF-2026-001',
-        created_at: new Date(Date.now() - 604800000).toISOString(),
-        is_online: true,
-      },
-      {
-        email: 'surveyor@agrimap.local',
-        password: 'surveyor123',
-        role: 'verifier',
-        full_name: 'Field Surveyor & Land Specialist',
-        contact_number: '+91 98840 12345',
-        area_place: 'Pollachi & Western Ghats',
-        specialization: 'RTK GPS Boundary Survey',
-        license_number: 'V2V-SURV-2026-042',
-        created_at: new Date(Date.now() - 432000000).toISOString(),
-        is_online: true,
       }
     ]
     return getStoredOrInit('farmxt_user_credentials_v1', initialCreds)
@@ -575,34 +554,6 @@ export const farmStorage = {
     return creds.filter(c => c.role === 'consumer' || c.role === 'dealer')
   },
 
-  getSurveyors: () => {
-    const creds = farmStorage.getUserCredentials()
-    return creds.filter(c => c.role === 'verifier' || c.role === 'surveyor')
-  },
-
-  createSurveyor: (surveyorData) => {
-    const cleanEmail = (surveyorData.email || '').toLowerCase().trim()
-    const newSurveyor = {
-      id: `surveyor-${Date.now()}`,
-      role: 'verifier',
-      is_active: true,
-      ...surveyorData,
-      email: cleanEmail,
-      created_at: new Date().toISOString(),
-      is_online: true,
-    }
-    farmStorage.saveUserCredential(newSurveyor)
-    return newSurveyor
-  },
-
-  deleteSurveyor: (email) => {
-    const creds = farmStorage.getUserCredentials()
-    const cleanEmail = (email || '').toLowerCase().trim()
-    const remaining = creds.filter(c => !(c.email.toLowerCase() === cleanEmail && (c.role === 'verifier' || c.role === 'surveyor')))
-    localStorage.setItem('farmxt_user_credentials_v1', JSON.stringify(remaining))
-    return true
-  },
-
   authenticateUser: (email, password, role) => {
     const creds = farmStorage.getUserCredentials()
     const cleanEmail = (email || '').toLowerCase().trim()
@@ -636,6 +587,126 @@ export const farmStorage = {
     const updated = [newOrder, ...orders]
     localStorage.setItem('farmxt_marketplace_orders_v1', JSON.stringify(updated))
     return newOrder
+  },
+
+  // 👷 Surveyor Management
+  getSurveyors: () => {
+    const creds = farmStorage.getUserCredentials()
+    return creds.filter(c => c.role === 'surveyor')
+  },
+
+  createSurveyor: (surveyorData) => {
+    const surveyor = {
+      id: `surveyor-${Date.now()}`,
+      role: 'surveyor',
+      created_at: new Date().toISOString(),
+      is_online: false,
+      ...surveyorData
+    }
+    return farmStorage.saveUserCredential(surveyor)
+  },
+
+  createConsumer: (consumerData) => {
+    const consumer = {
+      id: `consumer-${Date.now()}`,
+      role: 'consumer',
+      created_at: new Date().toISOString(),
+      is_online: true,
+      ...consumerData
+    }
+    return farmStorage.saveUserCredential(consumer)
+  },
+
+  createDealer: (dealerData) => {
+    const dealer = {
+      id: `dealer-${Date.now()}`,
+      role: 'dealer',
+      created_at: new Date().toISOString(),
+      is_online: true,
+      ...dealerData
+    }
+    return farmStorage.saveUserCredential(dealer)
+  },
+
+  recordSurveyorActivity: (surveyorId, activityData) => {
+    const activities = getStoredOrInit('farmxt_surveyor_activities_v1', [])
+    const newActivity = {
+      id: `activity-${Date.now()}`,
+      surveyor_id: surveyorId,
+      timestamp: new Date().toISOString(),
+      ...activityData
+    }
+    const updated = [newActivity, ...activities]
+    localStorage.setItem('farmxt_surveyor_activities_v1', JSON.stringify(updated))
+    return newActivity
+  },
+
+  getSurveyorActivities: (surveyorId = null) => {
+    const activities = getStoredOrInit('farmxt_surveyor_activities_v1', [])
+    if (surveyorId) {
+      return activities.filter(a => a.surveyor_id === surveyorId)
+    }
+    return activities
+  },
+
+  updateSurveyorStatus: (surveyorId, status) => {
+    const creds = farmStorage.getUserCredentials()
+    const index = creds.findIndex(c => c.id === surveyorId && c.role === 'surveyor')
+    if (index >= 0) {
+      creds[index].is_online = status.is_online !== undefined ? status.is_online : creds[index].is_online
+      creds[index].last_activity_at = new Date().toISOString()
+      localStorage.setItem('farmxt_user_credentials_v1', JSON.stringify(creds))
+      return creds[index]
+    }
+    return null
+  },
+
+  updateField: (fieldId, updateData) => {
+    const gj = farmStorage.getFieldGeoJSON(fieldId)
+    const fieldFeat = gj.features.find(f => f.properties?.entity_type === 'field')
+    if (fieldFeat) {
+      fieldFeat.properties = { ...fieldFeat.properties, ...updateData }
+      farmStorage.saveFieldGeoJSON(fieldId, gj)
+    }
+    return gj
+  },
+
+  addDeviceToField: (fieldId, deviceData) => {
+    const gj = farmStorage.getFieldGeoJSON(fieldId)
+    const newFeature = {
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: deviceData.coordinates || [77.0125, 10.6585],
+      },
+      properties: deviceData,
+    }
+    gj.features.push(newFeature)
+    farmStorage.saveFieldGeoJSON(fieldId, gj)
+    return newFeature
+  },
+
+  deleteDeviceFromField: (fieldId, deviceId) => {
+    const gj = farmStorage.getFieldGeoJSON(fieldId)
+    gj.features = gj.features.filter(f => f.properties?.id !== deviceId)
+    farmStorage.saveFieldGeoJSON(fieldId, gj)
+    return gj
+  },
+
+  updateDeviceInField: (fieldId, deviceId, updatedData) => {
+    const gj = farmStorage.getFieldGeoJSON(fieldId)
+    const feat = gj.features.find(f => (f.properties?.id === deviceId || f.id === deviceId))
+    if (feat) {
+      if (updatedData.coordinates && Array.isArray(updatedData.coordinates)) {
+        feat.geometry.coordinates = [
+          parseFloat(updatedData.coordinates[0]),
+          parseFloat(updatedData.coordinates[1]),
+        ]
+      }
+      feat.properties = { ...feat.properties, ...updatedData }
+      farmStorage.saveFieldGeoJSON(fieldId, gj)
+    }
+    return gj
   }
 }
 

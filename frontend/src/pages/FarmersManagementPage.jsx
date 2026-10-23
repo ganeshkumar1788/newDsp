@@ -1,36 +1,54 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import Icon from '../components/common/Icon'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import farmStorage from '../lib/farmStorage'
 import toast from '../components/ui/Toast'
 import ScratchMapDigitizerModal from '../components/survey/ScratchMapDigitizerModal'
 import { parseCoordinates } from '../lib/coordinateParser'
-import { useAuth } from '../contexts/AuthContext'
+import LocationPickerMiniMap from '../components/map/LocationPickerMiniMap'
+import ViewLocationModal from '../components/map/ViewLocationModal'
 
 export default function FarmersManagementPage() {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
-  const isVerifier = user?.role === 'verifier'
-  const [searchParams] = useSearchParams()
-  const queryTab = searchParams.get('tab')
-
+  const currentRole = user?.role || 'admin'
+  const isLandVerifier = currentRole === 'land_verifier'
+  const isVerifier = currentRole === 'verifier'
   const [farmers, setFarmers] = useState([])
   const [pendingRegistrations, setPendingRegistrations] = useState([])
   const [consumerDealers, setConsumerDealers] = useState([])
-  const [activeTab, setActiveTab] = useState(queryTab === 'requests' ? 'requests' : 'farmers')
+  const [activeTab, setActiveTab] = useState('farmers') // 'farmers' | 'consumers_dealers'
   const [search, setSearch] = useState('')
   const [cdSearch, setCdSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showScratchMapModal, setShowScratchMapModal] = useState(false)
   const [editingFarmer, setEditingFarmer] = useState(null)
   const [deleteConfirmFarmer, setDeleteConfirmFarmer] = useState(null)
-  
-  // Approval Modal State
-  const [approveModalItem, setApproveModalItem] = useState(null)
-  const [approvalForm, setApprovalForm] = useState({ email: '', password: 'farmer123' })
 
-  const navigate = useNavigate()
+  // ── Modals & Location States for Customer and Dealer ──
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false)
+  const [customerForm, setCustomerForm] = useState({
+    full_name: '',
+    contact_number: '',
+    email: '',
+    password: 'consumer123',
+    area_place: '',
+    location: null,
+  })
 
-  // ── Coordinate Go-To State ──
+  const [showAddDealerModal, setShowAddDealerModal] = useState(false)
+  const [dealerForm, setDealerForm] = useState({
+    full_name: '',
+    contact_number: '',
+    email: '',
+    password: 'dealer123',
+    area_place: '',
+    location: null,
+  })
+
+  const [viewLocationItem, setViewLocationItem] = useState(null)
+
+  // ── Coordinate Go-To Navigator State ──
   const [coordGoName, setCoordGoName] = useState('')
   const [coordGoValue, setCoordGoValue] = useState('')
   const [coordGoError, setCoordGoError] = useState('')
@@ -52,7 +70,12 @@ export default function FarmersManagementPage() {
     })
     navigate(`/admin/editor/field-1?${params.toString()}`)
   }
+  
+  // Approval Modal State
+  const [approveModalItem, setApproveModalItem] = useState(null)
+  const [approvalForm, setApprovalForm] = useState({ email: '', password: 'farmer123' })
 
+  const navigate = useNavigate()
 
   // Form state
   const [form, setForm] = useState({
@@ -66,6 +89,7 @@ export default function FarmersManagementPage() {
     total_acres: '',
     khata_number: '',
     crops_summary: '',
+    location: null,
   })
 
   const loadFarmers = () => {
@@ -85,14 +109,6 @@ export default function FarmersManagementPage() {
     loadPending()
     loadConsumerDealers()
   }, [])
-
-  useEffect(() => {
-    if (queryTab === 'requests') {
-      setActiveTab('requests')
-    } else if (queryTab === 'farmers') {
-      setActiveTab('farmers')
-    }
-  }, [queryTab])
 
   const handleOpenApproveModal = (pendingItem) => {
     setApproveModalItem(pendingItem)
@@ -159,6 +175,7 @@ export default function FarmersManagementPage() {
       total_acres: '',
       khata_number: '',
       crops_summary: '',
+      location: null,
     })
     setShowAddModal(true)
   }
@@ -177,10 +194,11 @@ export default function FarmersManagementPage() {
       total_acres: farmer.total_acres || '',
       khata_number: farmer.khata_number || '',
       crops_summary: farmer.crops_summary || '',
+      location: farmer.location || null,
     })
   }
 
-  // Submit Add / Edit
+  // Submit Add / Edit Farmer
   const handleSubmit = (e) => {
     e.preventDefault()
     const acres = parseFloat(form.total_acres) || 5.0
@@ -202,6 +220,60 @@ export default function FarmersManagementPage() {
       setShowAddModal(false)
     }
     loadFarmers()
+  }
+
+  // Submit Add Customer
+  const handleAddCustomerSubmit = (e) => {
+    e.preventDefault()
+    if (!customerForm.full_name || !customerForm.email) return
+
+    const created = farmStorage.createConsumer({
+      full_name: customerForm.full_name,
+      contact_number: customerForm.contact_number || 'N/A',
+      email: customerForm.email,
+      password: customerForm.password || 'consumer123',
+      area_place: customerForm.area_place || 'Not Specified',
+      location: customerForm.location,
+    })
+
+    toast.success(`Customer "${created.full_name}" registered successfully!`)
+    loadConsumerDealers()
+    setShowAddCustomerModal(false)
+    setCustomerForm({
+      full_name: '',
+      contact_number: '',
+      email: '',
+      password: 'consumer123',
+      area_place: '',
+      location: null,
+    })
+  }
+
+  // Submit Add Dealer
+  const handleAddDealerSubmit = (e) => {
+    e.preventDefault()
+    if (!dealerForm.full_name || !dealerForm.email) return
+
+    const created = farmStorage.createDealer({
+      full_name: dealerForm.full_name,
+      contact_number: dealerForm.contact_number || 'N/A',
+      email: dealerForm.email,
+      password: dealerForm.password || 'dealer123',
+      area_place: dealerForm.area_place || 'Not Specified',
+      location: dealerForm.location,
+    })
+
+    toast.success(`Agri-Dealer "${created.full_name}" registered successfully!`)
+    loadConsumerDealers()
+    setShowAddDealerModal(false)
+    setDealerForm({
+      full_name: '',
+      contact_number: '',
+      email: '',
+      password: 'dealer123',
+      area_place: '',
+      location: null,
+    })
   }
 
   // Confirm Delete
@@ -278,109 +350,60 @@ export default function FarmersManagementPage() {
         </div>
       )}
 
-      {/* ── Top Header ── */}
+      {/* ── Top Admin Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-v2v-deep/10 dark:bg-purple-950/80 text-v2v-deep dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50 text-xs font-bold mb-2">
-            <span>{isAdmin ? '⚙️ Admin Management Portal' : '🛡️ Verifier & Cadastral Console'}</span>
+            <span>{currentRole === 'admin' ? '⚙️' : isLandVerifier ? '📐' : '🛡️'}</span>
+            <span>{currentRole === 'admin' ? 'Admin Management Console' : isLandVerifier ? 'Land Verifier Console' : 'Verifier Console'}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-v2v-deep dark:text-purple-300 tracking-tight">
-            {isAdmin ? 'Farmers & Registration Management' : 'Farmers & Farmland Directory'}
+            {currentRole === 'admin' ? 'Farmers & Surveyors Directory' : 'Farmers Directory'}
           </h1>
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
-            {isAdmin
-              ? 'Review pending farmer registration requests, issue login credentials, and manage registered farmers.'
-              : 'Register new farmers, correct GPS boundary shapes, manage borewells, CCTV cameras, and IoT sensors.'}
+            {currentRole === 'admin'
+              ? 'Manage farmers list and surveyor activities.'
+              : isLandVerifier
+              ? 'Approve farmer registrations and access map editing tools.'
+              : 'View farmer details and approve new registrations.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Marketplace Orders Button (Verifier Only) */}
-          {!isAdmin && (
-            <button
-              onClick={() => setAdminOrdersOpen(true)}
-              className="relative btn-secondary text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all border-blue-300 text-blue-700 hover:bg-blue-50"
-            >
-              <span>📋</span>
-              <span>Marketplace Orders</span>
-              {allMarketplaceOrders.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-                  {allMarketplaceOrders.length}
-                </span>
-              )}
-            </button>
-          )}
-
-          {/* 📍 Go-To Coordinate Navigator */}
-          <form
-            onSubmit={handleCoordGo}
-            className="relative flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-v2v-lavendergray dark:border-slate-700 px-2.5 py-2 rounded-xl shadow-sm"
-          >
-            <span className="text-sm select-none">📍</span>
-            <input
-              type="text"
-              value={coordGoName}
-              onChange={(e) => setCoordGoName(e.target.value)}
-              placeholder="Location name"
-              className="bg-transparent text-xs w-24 focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-gray-400 font-semibold border-r border-v2v-lavendergray dark:border-slate-600 pr-1.5"
-              aria-label="Location name"
-            />
-            <input
-              type="text"
-              value={coordGoValue}
-              onChange={(e) => { setCoordGoValue(e.target.value); if (coordGoError) setCoordGoError('') }}
-              placeholder={`9°34'03.0"N 77°40'44.8"E`}
-              className="bg-transparent text-xs w-44 focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-gray-400 font-mono"
-              aria-label="Enter DMS or decimal coordinates"
-            />
-            <button
-              type="submit"
-              className="btn-v2v-gradient text-xs py-1 px-3 rounded-lg font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
-            >
-              Go to Map
-            </button>
-            {coordGoError && (
-              <div
-                role="alert"
-                className="absolute top-full left-0 mt-1 z-50 bg-rose-50 dark:bg-rose-950/90 text-rose-600 dark:text-rose-300 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-rose-300 dark:border-rose-800 shadow-md max-w-xs"
+        <div className="flex items-center gap-3">
+          {currentRole === 'admin' && (
+            <>
+              {/* Marketplace Orders Button */}
+              <button
+                onClick={() => setAdminOrdersOpen(true)}
+                className="relative btn-secondary text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all border-blue-300 text-blue-700 hover:bg-blue-50"
               >
-                ⚠️ {coordGoError}
-              </div>
-            )}
-          </form>
-
-          {/* Start Map From Scratch (Verifier Only) */}
-          {!isAdmin && (
-            <button
-              onClick={() => setShowScratchMapModal(true)}
-              className="btn-v2v-gradient text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
-            >
-              <span>🗺️</span>
-              <span>Start Map From Scratch</span>
-            </button>
+                <span>📋</span>
+                <span>Marketplace Orders</span>
+                {allMarketplaceOrders.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                    {allMarketplaceOrders.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={openAddModal}
+                className="btn-outline text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all"
+              >
+                <span>+</span>
+                <span>Add Farmer</span>
+              </button>
+            </>
           )}
-
-          {/* Add Farmer Profile (Both Admin and Verifier) */}
-          <button
-            onClick={openAddModal}
-            className="btn-outline text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all font-semibold"
-          >
-            <span>+</span>
-            <span>Add Farmer Profile</span>
-          </button>
-
-          {/* Surveyor Creation Shortcut (Admin Only) */}
-          {isAdmin && (
+          {isLandVerifier && (
             <Link
               to="/admin/surveyors"
-              className="btn-v2v-gradient text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all font-bold"
+              className="btn-secondary text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
-              <span>🛡️</span>
-              <span>Create Surveyor</span>
+              <span>👷</span>
+              <span>Surveyor Activities</span>
             </Link>
           )}
         </div>
-
       </div>
 
       {/* ── Stats Summary Bar ── */}
@@ -407,90 +430,110 @@ export default function FarmersManagementPage() {
         </div>
       </div>
 
-      {/* ── Section Directory Switcher ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-v2v-lavendergray dark:border-slate-800 shadow-sm">
+      {/* ── 🔔 FARM-XT Pending Farmer Registration Notifications & Verification Queue ── */}
+      {pendingRegistrations.length > 0 && (
+        <div className="bg-purple-950/90 text-white p-5 rounded-2xl border border-purple-500/50 shadow-xl space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-purple-800/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400"></span>
+              </span>
+              <h2 className="text-base font-extrabold text-white tracking-tight">
+                🔔 Pending Farmer Registration Requests ({pendingRegistrations.length})
+              </h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase">
+                {currentRole === 'admin' ? 'Admin Action Required' : isLandVerifier ? 'Land Verifier Review' : 'Verifier Review'}
+              </span>
+            </div>
+            <span className="text-xs text-purple-300 hidden sm:inline">
+              Notification sent from FARM-XT Gateway
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pendingRegistrations.map((item) => (
+              <div key={item.id} className="bg-purple-900/60 p-4 rounded-xl border border-purple-700/60 flex flex-col justify-between gap-3 hover:border-purple-400/80 transition-all">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-extrabold text-white">{item.full_name}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-600/40 font-bold uppercase">
+                      Age: {item.age || 'N/A'} yrs
+                    </span>
+                  </div>
+                  <div className="text-xs text-purple-200 space-y-1">
+                    <div>📍 <strong>Region / Address:</strong> {item.land_address || item.area_region}</div>
+                    <div>📞 <strong>Contact:</strong> {item.contact_number}</div>
+                    <div>📐 <strong>Land Size:</strong> {item.area_sq_acres}</div>
+                    <div className="pt-1 flex flex-wrap gap-1">
+                      <span className="text-[10px] text-purple-300 font-bold">Crops Yield:</span>
+                      {(item.crops_yield || []).map((crop, cIdx) => (
+                        <span key={cIdx} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-950 text-purple-200 border border-purple-700">
+                          {crop}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t border-purple-800/60">
+                  <button
+                    onClick={() => handleOpenApproveModal(item)}
+                    className="flex-1 btn-v2v-gradient text-xs py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md"
+                  >
+                    <span>✅ Approve & Create Credentials</span>
+                  </button>
+                  <button
+                    onClick={() => handleRejectRegistration(item.id)}
+                    className="px-3 py-2 text-xs rounded-xl bg-rose-950 text-rose-300 hover:bg-rose-900 border border-rose-800 font-semibold transition-colors"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Section Directory Switcher (Farmers vs Consumers & Dealers) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-v2v-lavendergray shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
-          {isAdmin ? (
-            <>
-              <button
-                onClick={() => setActiveTab('farmers')}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'farmers'
-                    ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/20'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <span>🧑‍🌾</span>
-                <span>Farmers List ({farmers.length})</span>
-              </button>
+          <button
+            onClick={() => setActiveTab('farmers')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'farmers'
+                ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/20'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span>🧑‍🌾</span>
+            <span>Farmers & Land Directory ({farmers.length})</span>
+          </button>
 
-              <button
-                onClick={() => setActiveTab('requests')}
-                className={`relative px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'requests'
-                    ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/20'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <span>🔔</span>
-                <span>New Farmer Requests</span>
-                {pendingRegistrations.length > 0 && (
-                  <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {pendingRegistrations.length}
-                  </span>
-                )}
-              </button>
-
-              <Link
-                to="/admin/surveyors"
-                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                <span>🛡️</span>
-                <span>Surveyor Creation →</span>
-              </Link>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setActiveTab('farmers')}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'farmers'
-                    ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/20'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <span>🧑‍🌾</span>
-                <span>Farmers & Land Directory ({farmers.length})</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('consumers_dealers')}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'consumers_dealers'
-                    ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/20'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <span>🛒</span>
-                <span>Consumers & Dealers Directory</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 border border-emerald-500/30 font-bold uppercase">
-                  View Only
-                </span>
-              </button>
-            </>
-          )}
+          <button
+            onClick={() => setActiveTab('consumers_dealers')}
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'consumers_dealers'
+                ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/20'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span>🛒</span>
+            <span>Consumers ({consumerDealers.filter(u => u.role === 'consumer').length}) & 🏢 Dealers ({consumerDealers.filter(u => u.role === 'dealer').length}) Directory</span>
+          </button>
         </div>
 
         <div className="text-xs text-slate-500 font-medium px-2 hidden lg:block">
-          {isAdmin ? '⚙️ Administrative Roster Control' : '🌾 Spatial Land & Telemetry Control'}
+          {activeTab === 'farmers' ? '🌾 Land & Telemetry Control' : '🛒 Consumers & 🏢 Dealers Directory'}
         </div>
       </div>
 
-      {activeTab === 'farmers' && (
+      {activeTab === 'farmers' ? (
         <>
-          {/* ── Search & Filter Toolbar ── */}
+          {/* ── Search & Filter Toolbar with Go-To Coordinate Navigator ── */}
           <div className="bg-white p-4 rounded-xl border border-v2v-lavendergray shadow-sm flex flex-wrap items-center justify-between gap-4">
-            <div className="relative flex-1 min-w-[280px]">
+            <div className="relative flex-1 min-w-[240px]">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                 🔍
               </span>
@@ -502,6 +545,42 @@ export default function FarmersManagementPage() {
                 className="input-field pl-9"
               />
             </div>
+
+            {/* 📍 Go-To Coordinate Navigator (DMS + Decimal) */}
+            <form
+              onSubmit={handleCoordGo}
+              className="relative flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-v2v-lavendergray dark:border-slate-700 px-2.5 py-1.5 rounded-xl shadow-sm"
+            >
+              <span className="text-sm select-none">📍</span>
+              <input
+                type="text"
+                value={coordGoName}
+                onChange={(e) => setCoordGoName(e.target.value)}
+                placeholder="Location label (optional)"
+                className="bg-transparent text-xs w-28 sm:w-36 focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-gray-400 hidden sm:block border-r border-gray-200 dark:border-gray-700 pr-2 mr-1"
+                aria-label="Location label"
+              />
+              <input
+                type="text"
+                value={coordGoValue}
+                onChange={(e) => { setCoordGoValue(e.target.value); if (coordGoError) setCoordGoError('') }}
+                placeholder={farmers[0] ? `${farmers[0].centroid?.[0] || '10.6585'}, ${farmers[0].centroid?.[1] || '77.0125'}` : "10.6585, 77.0125"}
+                className="bg-transparent text-xs w-44 sm:w-52 focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-gray-400 font-mono"
+                aria-label="Enter DMS or decimal coordinates"
+              />
+              <button
+                type="submit"
+                className="btn-v2v-gradient text-xs py-1 px-3 rounded-lg font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+              >
+                Go →
+              </button>
+              {coordGoError && (
+                <div className="absolute top-full left-0 mt-1 z-30 bg-rose-600 text-white text-[11px] px-2.5 py-1 rounded-lg shadow-lg whitespace-nowrap animate-fadeIn">
+                  {coordGoError}
+                </div>
+              )}
+            </form>
+
             <span className="text-xs text-gray-500">
               Showing <strong>{filteredFarmers.length}</strong> of {farmers.length} farmers
             </span>
@@ -530,94 +609,94 @@ export default function FarmersManagementPage() {
                     </tr>
                   ) : (
                     filteredFarmers.map((f) => (
-                      <tr key={f.id} className="hover:bg-v2v-softwhite/60 dark:hover:bg-slate-800/60 transition-colors">
+                      <tr key={f.id} className="hover:bg-v2v-softwhite/60 transition-colors">
                         <td
-                          className={`py-3.5 px-4 ${!isAdmin ? 'cursor-pointer group' : ''}`}
-                          onClick={() => !isAdmin && navigate(`/farmer?farmerId=${f.id}`)}
-                          title={!isAdmin ? 'Click to view farm telemetry map' : f.full_name}
+                          className="py-3.5 px-4 cursor-pointer group"
+                          onClick={() => navigate(`/farmer?farmerId=${f.id}`)}
+                          title="Click to view farm telemetry map"
                         >
-                          <div className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-v2v-deep flex items-center gap-1.5">
+                          <div className="font-bold text-gray-900 group-hover:text-v2v-deep flex items-center gap-1.5">
                             <span>{f.full_name}</span>
-                            {!isAdmin && (
-                              <span className="text-xs text-v2v-secondary font-semibold group-hover:translate-x-0.5 transition-transform">→</span>
-                            )}
+                            <span className="text-xs text-v2v-secondary font-semibold group-hover:translate-x-0.5 transition-transform">→</span>
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-slate-400">{f.contact_number}</div>
+                          <div className="text-xs text-gray-500">{f.contact_number}</div>
                           <div className="text-[11px] text-gray-400">{f.email}</div>
                         </td>
                         <td
-                          className={`py-3.5 px-4 ${!isAdmin ? 'cursor-pointer' : ''}`}
-                          onClick={() => !isAdmin && navigate(`/farmer?farmerId=${f.id}`)}
+                          className="py-3.5 px-4 cursor-pointer"
+                          onClick={() => navigate(`/farmer?farmerId=${f.id}`)}
                         >
-                          <span className="px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-purple-50 dark:bg-purple-950/60 text-v2v-deep dark:text-purple-300 border border-v2v-lavender/30 dark:border-purple-800/50">
+                          <span className="px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-purple-50 text-v2v-deep border border-v2v-lavender/30">
                             {f.khata_number}
                           </span>
-                          <div className="text-xs text-gray-600 dark:text-slate-400 mt-1">{f.village || f.district || 'Gujarat'}</div>
+                          <div className="text-xs text-gray-600 mt-1 flex items-center gap-1.5 flex-wrap">
+                            <span>{f.village || f.district || 'Gujarat'}</span>
+                            {f.location && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-0.5">
+                                <span>📍</span>
+                                <span>Located ({f.location.matchLevel || (f.location.approximate ? 'Approximate' : 'Exact')})</span>
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td
-                          className={`py-3.5 px-4 ${!isAdmin ? 'cursor-pointer' : ''}`}
-                          onClick={() => !isAdmin && navigate(`/farmer?farmerId=${f.id}`)}
+                          className="py-3.5 px-4 cursor-pointer"
+                          onClick={() => navigate(`/farmer?farmerId=${f.id}`)}
                         >
-                          <div className="font-extrabold text-v2v-deep dark:text-purple-300">{f.total_acres} Acres</div>
-                          <div className="text-xs text-gray-500 dark:text-slate-400">{f.total_hectares} Ha</div>
+                          <div className="font-extrabold text-v2v-deep">{f.total_acres} Acres</div>
+                          <div className="text-xs text-gray-500">{f.total_hectares} Ha</div>
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="flex flex-col gap-1 text-[11px]">
-                            <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                            <span className="text-emerald-700 font-semibold">
                               💧 {f.borewells_count || 1} Borewell & Pump
                             </span>
-                            <span className="text-v2v-secondary dark:text-purple-400 font-semibold">
+                            <span className="text-v2v-secondary font-semibold">
                               📹 {f.cctv_count || 1} 4K CCTV Camera
                             </span>
-                            <span className="text-purple-700 dark:text-purple-300 font-semibold">
+                            <span className="text-purple-700 font-semibold">
                               📡 {f.sensors_count || 2} IoT Sensor Nodes
                             </span>
                           </div>
                         </td>
                         <td className="py-3.5 px-4 max-w-xs">
-                          <div className="text-xs text-gray-700 dark:text-slate-300 truncate" title={f.crops_summary}>
+                          <div className="text-xs text-gray-700 truncate" title={f.crops_summary}>
                             {f.crops_summary || 'Mango, Cotton, Sugarcane'}
                           </div>
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
+                          <div className="text-[10px] text-emerald-600 font-medium mt-0.5">
                             Readiness: {f.readiness_score || 9.0} / 10
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {isAdmin ? (
+                            {currentRole === 'admin' && f.location && (
+                              <button
+                                type="button"
+                                onClick={() => setViewLocationItem({ ...f, role: 'farmer' })}
+                                className="px-2 py-1 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
+                                title="View Pinned Location on Map"
+                              >
+                                📍 Location
+                              </button>
+                            )}
+                            <button
+                              onClick={() => navigate(`/farmer?farmerId=${f.id}`)}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-v2v-deep text-white hover:bg-v2v-secondary transition-colors"
+                              title="Open Interactive Farm Map"
+                            >
+                              🗺️ Map
+                            </button>
+                            {(currentRole === 'admin' || isLandVerifier) && (
+                              <Link
+                                to={`/admin/editor/${f.field_id || 'field-1'}`}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white border border-v2v-lavendergray text-v2v-deep hover:bg-v2v-softwhite hover:border-v2v-lavender transition-colors"
+                                title="Edit Boundary & Devices"
+                              >
+                                ✏️ Devices
+                              </Link>
+                            )}
+                            {currentRole === 'admin' && (
                               <>
-                                <button
-                                  onClick={() => openEditModal(f)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-v2v-deep text-white hover:bg-v2v-secondary transition-colors flex items-center gap-1 shadow-sm"
-                                  title="Edit Farmer Details"
-                                >
-                                  <span>⚙️</span>
-                                  <span>Edit</span>
-                                </button>
-                                <button
-                                  onClick={() => setDeleteConfirmFarmer(f)}
-                                  className="p-1.5 text-xs text-rose-500 hover:text-rose-700 transition-colors"
-                                  title="Delete Farmer"
-                                >
-                                  🗑️
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => navigate(`/farmer?farmerId=${f.id}`)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-v2v-deep text-white hover:bg-v2v-secondary transition-colors"
-                                  title="Open Interactive Farm Map"
-                                >
-                                  🗺️ Map
-                                </button>
-                                <Link
-                                  to={`/admin/editor/${f.field_id || 'field-1'}`}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white border border-v2v-lavendergray text-v2v-deep hover:bg-v2v-softwhite hover:border-v2v-lavender transition-colors"
-                                  title="Edit Boundary & Devices"
-                                >
-                                  ✏️ Devices
-                                </Link>
                                 <button
                                   onClick={() => openEditModal(f)}
                                   className="p-1.5 text-xs text-gray-500 hover:text-v2v-deep transition-colors"
@@ -644,79 +723,8 @@ export default function FarmersManagementPage() {
             </div>
           </div>
         </>
-      )}
-
-      {/* ── Requests Tab (Admin only) ── */}
-      {activeTab === 'requests' && isAdmin && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-v2v-lavendergray dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-base font-extrabold text-v2v-deep dark:text-purple-300">🔔 Pending Farmer Registration Requests</h2>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Review, approve, or reject registration requests submitted by farmers. Approved farmers receive login credentials.</p>
-            </div>
-            <span className="text-xs px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 font-bold">
-              {pendingRegistrations.length} Pending
-            </span>
-          </div>
-
-          {pendingRegistrations.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-v2v-lavendergray dark:border-slate-800 shadow-sm p-12 text-center">
-              <div className="text-5xl mb-3">✅</div>
-              <p className="font-semibold text-gray-600 dark:text-gray-300">No pending farmer requests.</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">All registration submissions have been reviewed. New requests will appear here when farmers register.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingRegistrations.map((item) => (
-                <div key={item.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-v2v-lavendergray dark:border-slate-800 shadow-sm p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg">🧑‍🌾</span>
-                        <h3 className="font-extrabold text-gray-900 dark:text-gray-100 text-base">{item.full_name}</h3>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 font-bold uppercase">Pending Approval</span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 text-xs text-gray-600 dark:text-slate-400">
-                        <div><span className="font-semibold text-gray-800 dark:text-slate-300">📍 Region:</span><br/>{item.area_region}</div>
-                        <div><span className="font-semibold text-gray-800 dark:text-slate-300">📐 Area:</span><br/>{item.area_sq_acres}</div>
-                        <div><span className="font-semibold text-gray-800 dark:text-slate-300">📞 Contact:</span><br/>{item.contact_number}</div>
-                        <div><span className="font-semibold text-gray-800 dark:text-slate-300">🌾 Crops:</span><br/>{(item.crops_yield || []).join(', ') || 'Not specified'}</div>
-                      </div>
-                      {item.land_address && (
-                        <div className="mt-2 text-xs text-gray-500 dark:text-slate-400">
-                          <span className="font-semibold">🏘️ Address:</span> {item.land_address}
-                        </div>
-                      )}
-                      <div className="mt-2 text-[10px] text-gray-400">
-                        Submitted: {new Date(item.submitted_at).toLocaleString('en-IN')}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => handleOpenApproveModal(item)}
-                        className="btn-v2v-gradient text-xs px-4 py-2 rounded-xl font-bold shadow-sm flex items-center gap-1.5 hover:scale-[1.02] transition-all"
-                      >
-                        <span>✅</span>
-                        <span>Approve & Issue Credentials</span>
-                      </button>
-                      <button
-                        onClick={() => handleRejectRegistration(item.id)}
-                        className="btn-danger text-xs px-4 py-2 rounded-xl font-semibold flex items-center gap-1.5"
-                      >
-                        <span>❌</span>
-                        <span>Reject Request</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Consumers & Dealers View-Only Directory (Verifier only tab) ── */}
-      {activeTab === 'consumers_dealers' && !isAdmin && (
+      ) : (
+        /* ── Consumers & Dealers View-Only Directory ── */
         <div className="space-y-4">
           <div className="bg-white p-4 rounded-xl border border-v2v-lavendergray shadow-sm flex flex-wrap items-center justify-between gap-4">
             <div className="relative flex-1 min-w-[280px]">
@@ -731,13 +739,28 @@ export default function FarmersManagementPage() {
                 className="input-field pl-9"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs text-gray-500">
                 Showing <strong>{filteredConsumerDealers.length}</strong> registered accounts
               </span>
-              <span className="text-[10px] px-2.5 py-1 rounded-full bg-purple-100 text-v2v-deep font-bold border border-purple-200 uppercase">
-                👁️ Admin View Only
-              </span>
+              {currentRole === 'admin' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomerModal(true)}
+                    className="btn-v2v-gradient text-xs py-1.5 px-3 rounded-xl font-bold flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    <span>+ Add Customer</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddDealerModal(true)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#F59E0B] hover:bg-[#D97706] text-white flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    <span>+ Add Dealer</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -748,10 +771,10 @@ export default function FarmersManagementPage() {
                   <tr>
                     <th className="py-3.5 px-4 font-bold">User / Business Name</th>
                     <th className="py-3.5 px-4 font-bold">Account Role</th>
-                    <th className="py-3.5 px-4 font-bold">📍 Area / Place</th>
+                    <th className="py-3.5 px-4 font-bold">Area / Place</th>
                     <th className="py-3.5 px-4 font-bold">Contact / Email</th>
                     <th className="py-3.5 px-4 font-bold">Login & Activity Status</th>
-                    <th className="py-3.5 px-4 font-bold text-right">Access Mode</th>
+                    <th className="py-3.5 px-4 font-bold text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -766,7 +789,7 @@ export default function FarmersManagementPage() {
                       <tr key={idx} className="hover:bg-v2v-softwhite/60 transition-colors">
                         <td className="py-3.5 px-4 font-bold text-gray-900">
                           <div className="flex items-center gap-2">
-                            <span className="text-base">{user.role === 'consumer' ? '🛒' : '🏢'}</span>
+                            <span className="text-base inline-flex items-center"><Icon name={user.role === 'consumer' ? 'cart' : 'store'} size={16} /></span>
                             <span>{user.full_name || user.email}</span>
                           </div>
                         </td>
@@ -776,13 +799,18 @@ export default function FarmersManagementPage() {
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : 'bg-amber-50 text-amber-800 border-amber-200'
                           }`}>
-                            {user.role === 'consumer' ? '🛒 Consumer' : '🏢 Agri-Dealer'}
+                            {user.role === 'consumer' ? 'Consumer' : 'Agri-Dealer'}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 font-medium text-gray-700">
-                          <div className="flex items-center gap-1">
-                            <span>📍</span>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <Icon name="mapPin" size={12} className="text-gray-400 inline" />
                             <span>{user.area_place || 'Not Specified'}</span>
+                            {currentRole === 'admin' && user.location && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 ml-1">
+                                📍 Located ({user.location.matchLevel || (user.location.approximate ? 'Approximate' : 'Exact')})
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="py-3.5 px-4">
@@ -799,9 +827,21 @@ export default function FarmersManagementPage() {
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <span className="text-[11px] font-mono px-2 py-1 rounded bg-gray-100 text-gray-600 border border-gray-200 font-semibold">
-                            👁️ View Only
-                          </span>
+                          <div className="flex items-center justify-end gap-2">
+                            {currentRole === 'admin' && user.location && (
+                              <button
+                                type="button"
+                                onClick={() => setViewLocationItem(user)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-purple-50 text-v2v-deep hover:bg-purple-100 border border-purple-200 transition-colors cursor-pointer"
+                                title="View Location on Map"
+                              >
+                                📍 View location
+                              </button>
+                            )}
+                            <span className="text-[11px] font-mono px-2 py-1 rounded bg-gray-100 text-gray-600 border border-gray-200 font-semibold">
+                              <Icon name="eye" size={14} className="inline mr-1" /> View Only
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -935,6 +975,15 @@ export default function FarmersManagementPage() {
                 />
               </div>
 
+              {/* ── Farm Location Section ── */}
+              <LocationPickerMiniMap
+                role="farmer"
+                label="Farm location"
+                hint="You can also draw the exact boundary later in the Land & Drawing Editor"
+                location={form.location}
+                onChange={(loc) => setForm((prev) => ({ ...prev, location: loc }))}
+              />
+
               <div className="bg-purple-50 p-3 rounded-xl border border-v2v-lavender/30 text-xs text-v2v-deep flex items-start gap-2">
                 <span>ℹ️</span>
                 <span>
@@ -1015,9 +1064,9 @@ export default function FarmersManagementPage() {
             </div>
 
             <div className="bg-purple-50 dark:bg-slate-800/80 p-3.5 rounded-2xl border border-purple-200 dark:border-slate-700 text-xs text-purple-950 dark:text-purple-200 space-y-1">
-              <div>📍 <strong>Region:</strong> {approveModalItem.land_address || approveModalItem.area_region}</div>
-              <div>📐 <strong>Land Area:</strong> {approveModalItem.area_sq_acres}</div>
-              <div>🌾 <strong>Crops Yield:</strong> {(approveModalItem.crops_yield || []).join(', ')}</div>
+              <div><strong>Region:</strong> {approveModalItem.land_address || approveModalItem.area_region}</div>
+              <div><strong>Land Area:</strong> {approveModalItem.area_sq_acres}</div>
+              <div><strong>Crops Yield:</strong> {(approveModalItem.crops_yield || []).join(', ')}</div>
             </div>
 
             <form onSubmit={handleConfirmApproval} className="space-y-4 pt-1">
@@ -1065,7 +1114,242 @@ export default function FarmersManagementPage() {
         </div>
       )}
 
-      {/* ── Interactive Scratch Map Digitizer & Sub-Field Studio Modal ── */}
+      {/* ── Add Customer Modal ── */}
+      {showAddCustomerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#1A112B] rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-v2v-lavendergray dark:border-purple-800/60 animate-slide-up">
+            <div className="bg-v2v-gradient px-6 py-4 text-white flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base flex items-center gap-2">
+                  <span>👤</span>
+                  <span>Register New Customer</span>
+                </h3>
+                <p className="text-xs text-purple-100 mt-0.5">
+                  Create a consumer profile with delivery location pin
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddCustomerModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCustomerSubmit} className="p-6 space-y-4 max-h-[82vh] overflow-y-auto text-xs sm:text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    className="input-field"
+                    placeholder="e.g. Ananya Sharma"
+                    value={customerForm.full_name}
+                    onChange={(e) => setCustomerForm({ ...customerForm, full_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Contact Phone *</label>
+                  <input
+                    type="text"
+                    required
+                    className="input-field"
+                    placeholder="e.g. +91 98452 11029"
+                    value={customerForm.contact_number}
+                    onChange={(e) => setCustomerForm({ ...customerForm, contact_number: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    className="input-field"
+                    placeholder="consumer@farmxt.com"
+                    value={customerForm.email}
+                    onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Account Password *</label>
+                  <input
+                    type="text"
+                    required
+                    className="input-field font-mono"
+                    placeholder="consumer123"
+                    value={customerForm.password}
+                    onChange={(e) => setCustomerForm({ ...customerForm, password: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Delivery Area / City *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-field"
+                  placeholder="e.g. Anand & Vadodara, Gujarat"
+                  value={customerForm.area_place}
+                  onChange={(e) => setCustomerForm({ ...customerForm, area_place: e.target.value })}
+                />
+              </div>
+
+              {/* Delivery Location Section */}
+              <LocationPickerMiniMap
+                role="consumer"
+                label="Delivery location"
+                hint="Choose where harvest produce and retail supplies should be dispatched"
+                location={customerForm.location}
+                onChange={(loc) => setCustomerForm((prev) => ({ ...prev, location: loc }))}
+              />
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCustomerModal(false)}
+                  className="btn-secondary text-xs py-2 px-4 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-v2v-gradient text-xs py-2 px-5 font-semibold cursor-pointer shadow-md"
+                >
+                  Register Customer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Dealer Modal ── */}
+      {showAddDealerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#1A112B] rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-v2v-lavendergray dark:border-purple-800/60 animate-slide-up">
+            <div className="bg-[#D97706] bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-4 text-white flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base flex items-center gap-2">
+                  <span>🏪</span>
+                  <span>Register New Agri-Dealer</span>
+                </h3>
+                <p className="text-xs text-amber-100 mt-0.5">
+                  Create a dealer profile with shop or warehouse location
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddDealerModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddDealerSubmit} className="p-6 space-y-4 max-h-[82vh] overflow-y-auto text-xs sm:text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Business / Shop Name *</label>
+                  <input
+                    type="text"
+                    required
+                    className="input-field"
+                    placeholder="e.g. Kisan Fertilizer & Seed Depot"
+                    value={dealerForm.full_name}
+                    onChange={(e) => setDealerForm({ ...dealerForm, full_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Contact Phone *</label>
+                  <input
+                    type="text"
+                    required
+                    className="input-field"
+                    placeholder="e.g. +91 97112 88431"
+                    value={dealerForm.contact_number}
+                    onChange={(e) => setDealerForm({ ...dealerForm, contact_number: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    className="input-field"
+                    placeholder="dealer@farmxt.com"
+                    value={dealerForm.email}
+                    onChange={(e) => setDealerForm({ ...dealerForm, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Account Password *</label>
+                  <input
+                    type="text"
+                    required
+                    className="input-field font-mono"
+                    placeholder="dealer123"
+                    value={dealerForm.password}
+                    onChange={(e) => setDealerForm({ ...dealerForm, password: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Business Area / Location *</label>
+                <input
+                  type="text"
+                  required
+                  className="input-field"
+                  placeholder="e.g. Guntur Highway, AP"
+                  value={dealerForm.area_place}
+                  onChange={(e) => setDealerForm({ ...dealerForm, area_place: e.target.value })}
+                />
+              </div>
+
+              {/* Shop / Business Location Section */}
+              <LocationPickerMiniMap
+                role="dealer"
+                label="Shop / business location"
+                hint="Choose the storefront, wholesale depot, or pickup point location"
+                location={dealerForm.location}
+                onChange={(loc) => setDealerForm((prev) => ({ ...prev, location: loc }))}
+              />
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddDealerModal(false)}
+                  className="btn-secondary text-xs py-2 px-4 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#D97706] hover:bg-[#B45309] text-white shadow-md transition-colors cursor-pointer"
+                >
+                  Register Dealer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── View Location Map Modal ── */}
+      <ViewLocationModal
+        isOpen={Boolean(viewLocationItem)}
+        onClose={() => setViewLocationItem(null)}
+        item={viewLocationItem}
+      />
       <ScratchMapDigitizerModal
         isOpen={showScratchMapModal}
         onClose={() => setShowScratchMapModal(false)}

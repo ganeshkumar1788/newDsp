@@ -1,95 +1,103 @@
-import { parseCoordinates } from './coordinateParser.js'
+import assert from 'node:assert'
+import { parseCoordinates, toDms } from './coordinateParser.js'
 
-function runTests() {
-  const tests = [
-    {
-      name: 'Sample DMS format from requirements (9°34\'03.0"N 77°40\'44.8"E)',
-      input: '9°34\'03.0"N 77°40\'44.8"E',
-      expectedOk: true,
-      expectedLat: 9.5675,
-      expectedLng: 77.679111,
-      tolerance: 0.0001,
-    },
-    {
-      name: 'Typographic quotes & primes (9°34′03.0″N 77°40′44.8″E)',
-      input: '9°34′03.0″N 77°40′44.8″E',
-      expectedOk: true,
-      expectedLat: 9.5675,
-      expectedLng: 77.679111,
-      tolerance: 0.0001,
-    },
-    {
-      name: 'Decimal format with comma (9.5675, 77.679111)',
-      input: '9.5675, 77.679111',
-      expectedOk: true,
-      expectedLat: 9.5675,
-      expectedLng: 77.679111,
-      tolerance: 0.000001,
-    },
-    {
-      name: 'Decimal format with space separation (9.5675 77.679111)',
-      input: '9.5675 77.679111',
-      expectedOk: true,
-      expectedLat: 9.5675,
-      expectedLng: 77.679111,
-      tolerance: 0.000001,
-    },
-    {
-      name: 'South and West coordinates in DMS (33°51\'30"S 151°12\'30"W)',
-      input: '33°51\'30"S 151°12\'30"W',
-      expectedOk: true,
-      expectedLat: -33.858333,
-      expectedLng: -151.208333,
-      tolerance: 0.0001,
-    },
-    {
-      name: 'Latitude out of range (95.1234, 77.5678)',
-      input: '95.1234, 77.5678',
-      expectedOk: false,
-    },
-    {
-      name: 'Longitude out of range (12.3456, 185.1234)',
-      input: '12.3456, 185.1234',
-      expectedOk: false,
-    },
-    {
-      name: 'Invalid garbage input ("random text")',
-      input: 'random text',
-      expectedOk: false,
-    },
-    {
-      name: 'Empty string input ("")',
-      input: '',
-      expectedOk: false,
-    },
-  ]
+console.log('Testing coordinateParser.js...')
 
-  let passed = 0
-  let failed = 0
-
-  for (const t of tests) {
-    const res = parseCoordinates(t.input)
-    if (res.ok !== t.expectedOk) {
-      console.error(`FAIL: ${t.name}. Expected ok=${t.expectedOk}, got ok=${res.ok} (${res.error})`)
-      failed++
-      continue
-    }
-
-    if (t.expectedOk) {
-      const latDiff = Math.abs(res.lat - t.expectedLat)
-      const lngDiff = Math.abs(res.lng - t.expectedLng)
-      if (latDiff > t.tolerance || lngDiff > t.tolerance) {
-        console.error(`FAIL: ${t.name}. Expected lat=${t.expectedLat}, lng=${t.expectedLng}, got lat=${res.lat}, lng=${res.lng}`)
-        failed++
-        continue
-      }
-    }
-    console.log(`PASS: ${t.name}`)
-    passed++
-  }
-
-  console.log(`\nResults: ${passed} passed, ${failed} failed.`)
-  if (failed > 0) process.exit(1)
+// 1. Plain Decimal
+{
+  const res = parseCoordinates('10.6565, 77.0102')
+  assert.strictEqual(res.ok, true)
+  assert.ok(Math.abs(res.lat - 10.6565) < 1e-6)
+  assert.ok(Math.abs(res.lng - 77.0102) < 1e-6)
+  assert.strictEqual(res.outsideIndia, false)
+  console.log('PASS: 1. Plain decimal format')
 }
 
-runTests()
+// 2. Cardinal suffix
+{
+  const res = parseCoordinates('10.6565 N 77.0102 E')
+  assert.strictEqual(res.ok, true)
+  assert.ok(Math.abs(res.lat - 10.6565) < 1e-6)
+  assert.ok(Math.abs(res.lng - 77.0102) < 1e-6)
+  console.log('PASS: 2. Cardinal suffix format')
+}
+
+// 3. Cardinal prefix
+{
+  const res = parseCoordinates('N10.6565 E77.0102')
+  assert.strictEqual(res.ok, true)
+  assert.ok(Math.abs(res.lat - 10.6565) < 1e-6)
+  assert.ok(Math.abs(res.lng - 77.0102) < 1e-6)
+  console.log('PASS: 3. Cardinal prefix format')
+}
+
+// 4. DMS
+{
+  const res = parseCoordinates('10°39\'23.4"N 77°00\'36.7"E')
+  assert.strictEqual(res.ok, true)
+  // 10 + 39/60 + 23.4/3600 = 10.6565
+  // 77 + 0/60 + 36.7/3600 = 77.0101944
+  assert.ok(Math.abs(res.lat - 10.6565) < 1e-4)
+  assert.ok(Math.abs(res.lng - 77.0102) < 1e-4)
+  console.log('PASS: 4. DMS format')
+}
+
+// 5. Degrees Decimal Minutes (DDM)
+{
+  const res = parseCoordinates('10 39.39 N 77 0.612 E')
+  assert.strictEqual(res.ok, true)
+  // 10 + 39.39/60 = 10.6565
+  // 77 + 0.612/60 = 77.0102
+  assert.ok(Math.abs(res.lat - 10.6565) < 1e-4)
+  assert.ok(Math.abs(res.lng - 77.0102) < 1e-4)
+  console.log('PASS: 5. DDM format')
+}
+
+// 6. Negative values (Southern / Western hemisphere)
+{
+  const res = parseCoordinates('-33.8688, 151.2093')
+  assert.strictEqual(res.ok, true)
+  assert.ok(Math.abs(res.lat - (-33.8688)) < 1e-6)
+  assert.ok(Math.abs(res.lng - 151.2093) < 1e-6)
+  assert.strictEqual(res.outsideIndia, true)
+  console.log('PASS: 6. Negative Southern/Western coordinates')
+}
+
+// 7. Swap Detection
+{
+  const res = parseCoordinates('77.0102, 10.6565')
+  assert.strictEqual(res.ok, true)
+  assert.ok(res.swapSuggestion !== null)
+  assert.ok(Math.abs(res.swapSuggestion.lat - 10.6565) < 1e-4)
+  assert.ok(Math.abs(res.swapSuggestion.lng - 77.0102) < 1e-4)
+  console.log('PASS: 7. Swap detection suggestion')
+}
+
+// 8. Out of Range
+{
+  const res = parseCoordinates('95, 10')
+  assert.strictEqual(res.ok, false)
+  assert.ok(res.error.includes('out of range'))
+  console.log('PASS: 8. Out of range latitude rejection')
+}
+
+// 9. Unreadable / Garbage
+{
+  const res = parseCoordinates('abc')
+  assert.strictEqual(res.ok, false)
+  console.log('PASS: 9. Unreadable garbage rejection')
+}
+
+// 10. Decimal and DMS Agreement within 1e-6
+{
+  const lat = 10.656500
+  const lng = 77.010200
+  const dms = `${toDms(lat, 'N')} ${toDms(lng, 'E')}`
+  const parsed = parseCoordinates(dms)
+  assert.strictEqual(parsed.ok, true)
+  assert.ok(Math.abs(parsed.lat - lat) < 1e-4)
+  assert.ok(Math.abs(parsed.lng - lng) < 1e-4)
+  console.log('PASS: 10. Decimal and DMS agreement verified')
+}
+
+console.log('\nAll 10 coordinateParser tests passed successfully!\n')

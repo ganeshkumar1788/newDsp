@@ -1,9 +1,18 @@
 import React, { useState } from 'react'
+import Icon from '../components/common/Icon'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import farmStorage from '../lib/farmStorage'
+import V2VLogo from '../components/common/V2VLogo'
+import PortalNavbar from '../components/common/PortalNavbar'
+import { useNavigateWithLoader } from '../contexts/NavigationLoaderContext'
+import { getCart } from '../lib/consumerData'
 
 export default function MarketplacePage() {
   const { user } = useAuth()
+  const { navigateHome, navigateBackWithLoader } = useNavigateWithLoader()
+  const storeCart = getCart()
+  const totalStoreCartCount = storeCart.reduce((sum, item) => sum + item.quantity, 0)
   
   // Basic states for Consumer Cart
   const [cartOpen, setCartOpen] = useState(false)
@@ -18,13 +27,13 @@ export default function MarketplacePage() {
   const [selectedFarmer, setSelectedFarmer] = useState('Ganesh V.')
 
   const consumerProducts = [
-    { id: 1, name: 'Organic Basmati Rice (Paddy)', farmer: 'Vignesh R.', location: 'Thanjavur, Tamil Nadu', khata: '8492', score: 4.9, stock: '500 Quintals', harvest: 'Oct 2026', price: 4200, unit: 'Quintal', icon: '🌾' },
-    { id: 2, name: 'Golden Wheat (Bt CO-86032)', farmer: 'Kishore S.', location: 'Karad, Satara, Maharashtra', khata: '2194', score: 4.8, stock: '300 Quintals', harvest: 'Sep 2026', price: 3100, unit: 'Quintal', icon: '🌾' },
-    { id: 3, name: 'Alphonso Mangoes (Export Grade)', farmer: 'Ravi Kumar', location: 'Anand, Gujarat', khata: '4921', score: 5.0, stock: '50 Tons', harvest: 'May 2026', price: 1500, unit: 'Box', icon: '🥭' },
-    { id: 4, name: 'Guntur Red Hot Chillies (Sannam S4)', farmer: 'Venkatesh Rao', location: 'Guntur, AP', khata: '9421', score: 4.7, stock: '120 Quintals', harvest: 'Aug 2026', price: 18000, unit: 'Quintal', icon: '🌶️' },
-    { id: 5, name: 'Bt Cotton (Bollgard II Fibres)', farmer: 'Ramesh Patel', location: 'Anand, Gujarat', khata: '3941', score: 4.9, stock: '800 Quintals', harvest: 'Oct 2026', price: 7500, unit: 'Quintal', icon: '🌿' },
-    { id: 6, name: 'Raw Groundnut / Peanuts in Shell', farmer: 'Ramesh Patel', location: 'Anand, Gujarat', khata: '3941', score: 4.6, stock: '250 Quintals', harvest: 'Sep 2026', price: 6200, unit: 'Quintal', icon: '🥜' },
-    { id: 7, name: 'Fresh Farm Tomatoes & Organic Veggies', farmer: 'Ganesh V.', location: 'Pollachi, TN', khata: '1093', score: 4.9, stock: '20 Tons', harvest: 'Daily', price: 400, unit: 'Crate', icon: '🍅' },
+    { id: 1, name: 'Basmati Rice', farmer: 'Vignesh R.', location: 'Thanjavur, Tamil Nadu', khata: '8492', score: 4.9, stock: '500 Quintals', harvest: 'Oct 2026', price: 4200, unit: 'Quintal', icon: '🌾', iconKey: 'rice', image: '/images/sona_masoori_rice.jpg' },
+    { id: 2, name: 'Wheat', farmer: 'Kishore S.', location: 'Karad, Satara, Maharashtra', khata: '2194', score: 4.8, stock: '300 Quintals', harvest: 'Sep 2026', price: 3100, unit: 'Quintal', icon: '🌾', iconKey: 'wheat', image: '/images/durum_wheat.jpg' },
+    { id: 3, name: 'Mango', farmer: 'Ravi Kumar', location: 'Anand, Gujarat', khata: '4921', score: 5.0, stock: '50 Tons', harvest: 'May 2026', price: 1500, unit: 'Box', icon: '🥭', iconKey: 'mango', image: '/images/mango-alphonso.jpg' },
+    { id: 4, name: 'Red Chillies', farmer: 'Venkatesh Rao', location: 'Guntur, AP', khata: '9421', score: 4.7, stock: '120 Quintals', harvest: 'Aug 2026', price: 18000, unit: 'Quintal', icon: '🌶️', iconKey: 'chilli', image: '/images/red_bell_peppers.jpg' },
+    { id: 5, name: 'Cotton', farmer: 'Ramesh Patel', location: 'Anand, Gujarat', khata: '3941', score: 4.9, stock: '800 Quintals', harvest: 'Oct 2026', price: 7500, unit: 'Quintal', icon: '🌿', iconKey: 'cotton', image: '/images/yellow_soybeans.jpg' },
+    { id: 6, name: 'Groundnut', farmer: 'Ramesh Patel', location: 'Anand, Gujarat', khata: '3941', score: 4.6, stock: '250 Quintals', harvest: 'Sep 2026', price: 6200, unit: 'Quintal', icon: '🥜', iconKey: 'groundnut', image: '/images/groundnut_oil.jpg' },
+    { id: 7, name: 'Tomato', farmer: 'Ganesh V.', location: 'Pollachi, TN', khata: '1093', score: 4.9, stock: '20 Tons', harvest: 'Daily', price: 400, unit: 'Crate', icon: '🍅', iconKey: 'tomato', image: '/images/tomato-roma.jpg' },
   ]
 
   const dealerSupplies = [
@@ -112,17 +121,20 @@ export default function MarketplacePage() {
     }, {})
 
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-black text-v2v-deep dark:text-white mb-2">🏢 Dealer B2B Sourcing & Agri-Supply Hub</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-8">View farmers, their cultivation, and dispatch agri-supplies or propose wholesale contracts.</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <PortalNavbar portal="dealer" />
+
+        <div className="p-6 max-w-7xl mx-auto">
+          <h1 className="text-3xl font-black text-v2v-deep dark:text-white mb-2">🏢 Dealer B2B Sourcing & Agri-Supply Hub</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-8">View farmers, their cultivation, and dispatch agri-supplies or propose wholesale contracts.</p>
         
         <div className="mb-8 p-6 bg-v2v-purple/10 rounded-2xl border border-v2v-purple/20">
-          <h2 className="text-xl font-bold mb-4">🤝 Wholesale Harvest Contracting</h2>
+          <h2 className="text-xl font-bold mb-4"><Icon name="award" size={20} className="inline mr-2 text-emerald-600 align-sub" /> Wholesale Harvest Contracting</h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">Place B2B wholesale harvest contracts directly with farmers in bulk quantities (5 Tons to 100 Tons) with custom warehouse delivery locations and payment terms.</p>
           <button className="btn-v2v-gradient px-6 py-2 rounded-xl text-white font-bold shadow-lg">Initiate Bulk Contract</button>
         </div>
 
-        <h2 className="text-2xl font-bold mb-4">🧑‍🌾 Farmers Directory & Cultivation Profiles</h2>
+        <h2 className="text-2xl font-bold mb-4"><Icon name="user" size={22} className="inline mr-2 text-emerald-600 align-sub" /> Farmers Directory & Cultivation Profiles</h2>
         <div className="space-y-6">
           {Object.values(groupedByFarmer).map(farmer => (
             <div key={farmer.name} className="card border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden flex flex-col md:flex-row">
@@ -136,8 +148,8 @@ export default function MarketplacePage() {
                   </div>
                 </div>
                 <div className="text-sm text-emerald-800 dark:text-emerald-300 space-y-2">
-                  <p>📍 {farmer.location}</p>
-                  <p>📜 Survey Khata #{farmer.khata}</p>
+                  <p className="flex items-center gap-1.5"><Icon name="mapPin" size={14} className="text-emerald-700 dark:text-emerald-400" /> {farmer.location}</p>
+                  <p className="flex items-center gap-1.5"><Icon name="file" size={14} className="text-emerald-700 dark:text-emerald-400" /> Survey Khata #{farmer.khata}</p>
                   <p className="font-bold text-v2v-purple dark:text-purple-300 mt-2">Current Cultivation:</p>
                   <ul className="list-disc pl-4 text-xs">
                     {farmer.products.map(p => <li key={p.id}>{p.name}</li>)}
@@ -168,6 +180,7 @@ export default function MarketplacePage() {
 
             </div>
           ))}
+        </div>
         </div>
 
         {dealerOrderOpen && (
@@ -204,17 +217,21 @@ export default function MarketplacePage() {
   }, {})
 
   return (
-    <div className="p-6 max-w-7xl mx-auto relative">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-v2v-deep dark:text-white mb-2">🧑‍🌾 Verified Farmers Directory & Marketplace</h1>
-          <p className="text-gray-600 dark:text-gray-400">View farmers, their cultivation, available vegetables, and place orders directly.</p>
-        </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <PortalNavbar portal="consumer" cartCountOverride={cartItems.reduce((acc, item) => acc + item.qty, 0) || totalStoreCartCount} />
+
+      <div className="p-6 max-w-7xl mx-auto relative">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-black text-v2v-deep dark:text-white mb-2"><Icon name="user" size={26} className="inline mr-2 text-emerald-600 align-sub" /> Verified Farmers Directory & Marketplace</h1>
+            <p className="text-gray-600 dark:text-gray-400">View farmers, their cultivation, available vegetables, and place orders directly.</p>
+          </div>
         <button 
           onClick={() => setCartOpen(true)}
-          className="relative p-3 bg-v2v-purple text-white rounded-full shadow-lg hover:scale-105 transition-transform"
+          aria-label="View Shopping Cart"
+          className="relative p-3 bg-v2v-purple text-white rounded-full shadow-lg hover:scale-105 transition-transform flex items-center justify-center"
         >
-          🛒
+          <Icon name="cart" size={20} />
           {cartItems.length > 0 && (
             <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
               {cartItems.reduce((acc, item) => acc + item.qty, 0)}
@@ -230,8 +247,8 @@ export default function MarketplacePage() {
             {/* Farmer Info Sidebar */}
             <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 md:w-1/3 flex flex-col justify-center border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-emerald-200 dark:bg-emerald-800 rounded-full flex items-center justify-center text-2xl shadow-inner">
-                  🧑‍🌾
+                <div className="w-12 h-12 bg-emerald-200 dark:bg-emerald-800 rounded-full flex items-center justify-center shadow-inner text-emerald-900 dark:text-emerald-100">
+                  <Icon name="user" size={24} />
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-emerald-900 dark:text-emerald-100">{farmer.name}</h2>
@@ -239,8 +256,8 @@ export default function MarketplacePage() {
                 </div>
               </div>
               <div className="text-sm text-emerald-800 dark:text-emerald-300 space-y-2">
-                <p>📍 {farmer.location}</p>
-                <p>📜 Survey Khata #{farmer.khata}</p>
+                <p className="flex items-center gap-1.5"><Icon name="mapPin" size={14} className="text-emerald-700 dark:text-emerald-400" /> {farmer.location}</p>
+                <p className="flex items-center gap-1.5"><Icon name="file" size={14} className="text-emerald-700 dark:text-emerald-400" /> Survey Khata #{farmer.khata}</p>
                 <p className="font-bold text-v2v-purple dark:text-purple-300 mt-2">Cultivation & Vegetables Available:</p>
                 <ul className="list-disc pl-4 text-xs">
                   {farmer.products.map(p => <li key={p.id}>{p.name}</li>)}
@@ -255,14 +272,17 @@ export default function MarketplacePage() {
                 {farmer.products.map(product => (
                   <div key={product.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-4">
-                      <div className="text-4xl bg-white dark:bg-gray-900 w-12 h-12 rounded-lg flex items-center justify-center shadow-sm">
-                        {product.icon}
+                      <div className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-center shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex-shrink-0">
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }} />
+                        ) : null}
+                        <span className="text-3xl" style={{ display: product.image ? 'none' : 'block' }}>{product.icon}</span>
                       </div>
                       <div>
                         <h4 className="font-bold text-sm md:text-base">{product.name}</h4>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex gap-3">
-                          <span>📦 Stock: {product.stock}</span>
-                          <span>📅 Harvest: {product.harvest}</span>
+                          <span className="flex items-center gap-1"><Icon name="package" size={12} /> Stock: {product.stock}</span>
+                          <span className="flex items-center gap-1"><Icon name="calendar" size={12} /> Harvest: {product.harvest}</span>
                         </div>
                       </div>
                     </div>
@@ -285,6 +305,7 @@ export default function MarketplacePage() {
           </div>
         ))}
       </div>
+      </div>
 
       {/* Shopping Cart Drawer Modal */}
       {cartOpen && (
@@ -292,7 +313,7 @@ export default function MarketplacePage() {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setCartOpen(false)}></div>
           <div className="w-full max-w-md bg-white dark:bg-[#120326] h-full shadow-2xl relative z-10 flex flex-col transform transition-transform border-l border-gray-200 dark:border-gray-800">
             <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
-              <h2 className="text-xl font-bold flex items-center gap-2">🛒 Your Cart</h2>
+              <h2 className="text-xl font-bold flex items-center gap-2"><Icon name="cart" size={20} className="text-v2v-purple" /> Your Cart</h2>
               <button onClick={() => setCartOpen(false)} className="text-2xl hover:text-rose-500">×</button>
             </div>
             
@@ -303,7 +324,12 @@ export default function MarketplacePage() {
                 <div className="space-y-4">
                   {cartItems.map(item => (
                     <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                      <div className="text-3xl">{item.icon}</div>
+                      <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex-shrink-0">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }} />
+                        ) : null}
+                        <span className="text-xl" style={{ display: item.image ? 'none' : 'block' }}>{item.icon}</span>
+                      </div>
                       <div className="flex-1">
                         <div className="font-bold text-sm line-clamp-1">{item.name}</div>
                         <div className="text-xs text-gray-500">₹{item.price} / {item.unit}</div>
@@ -346,7 +372,7 @@ export default function MarketplacePage() {
             <div className="p-5 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#120326]">
               {orderPlaced ? (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-center text-sm font-bold animate-pulse">
-                  ✅ Processing Payment & Order...
+                  <span className="inline-flex items-center gap-1.5"><Icon name="check" size={16} className="text-emerald-500" /> Processing Payment & Order...</span>
                 </div>
               ) : (
                 <button 

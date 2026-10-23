@@ -1,437 +1,248 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { getCart, clearCart, saveOrder, getCartTotal } from '../../lib/consumerData.js'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getCart, clearCart, saveOrder } from '../../lib/consumerData.js'
+import PortalNavbar from '../../components/common/PortalNavbar.jsx'
 
 export default function DealerCheckoutPage() {
-  const [cart, setCart] = useState([])
+  const navigate = useNavigate()
+  const cart = getCart()
+  const total = cart.reduce((sum, item) => sum + (item.pricePerKg * item.quantity), 0)
+  const deliveryCharge = 200
+
   const [formData, setFormData] = useState({
-    businessName: '',
-    gstNumber: '',
     fullName: '',
     email: '',
     phone: '',
+    businessName: '',
+    gstNumber: '',
     address: '',
     city: '',
-    state: '',
+    state: 'Tamil Nadu',
     pincode: '',
     deliveryDate: '',
-    deliveryTime: '',
-    paymentMethod: 'upi',
-    cardNumber: '',
-    cardExpiry: '',
-    cardCvv: '',
-    upiId: '',
+    paymentMethod: 'cod',
   })
+
   const [isProcessing, setIsProcessing] = useState(false)
-  const [orderPlaced, setOrderPlaced] = useState(false)
-  const [orderId, setOrderId] = useState('')
-  const navigate = useNavigate()
 
-  useEffect(() => {
-    const loadedCart = getCart()
-    if (loadedCart.length === 0) {
-      navigate('/dealer/cart')
-      return
-    }
-    setCart(loadedCart)
-  }, [navigate])
-
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
-    
-    if (!formData.businessName || !formData.fullName || !formData.email || !formData.phone || !formData.address) {
-      alert('Please fill in all required fields')
-      return
-    }
-
     setIsProcessing(true)
 
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    setTimeout(() => {
+      const order = {
+        items: cart,
+        subtotal: total,
+        deliveryCharge,
+        total: total + deliveryCharge,
+        customerDetails: formData,
+        paymentMethod: formData.paymentMethod,
+      }
 
-    const order = {
-      items: cart,
-      total: getCartTotal(),
-      customer: {
-        businessName: formData.businessName,
-        gstNumber: formData.gstNumber,
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        pincode: formData.pincode,
-      },
-      delivery: {
-        date: formData.deliveryDate,
-        time: formData.deliveryTime,
-      },
-      payment: {
-        method: formData.paymentMethod,
-      },
-    }
-
-    const savedOrder = saveOrder(order)
-    clearCart()
-    setOrderId(savedOrder.id)
-    setOrderPlaced(true)
-    setIsProcessing(false)
+      saveOrder(order)
+      clearCart()
+      setIsProcessing(false)
+      navigate('/dealer/orders')
+    }, 2000)
   }
 
-  const cartTotal = getCartTotal()
-
-  if (orderPlaced) {
+  if (cart.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br bg-v2v-softwhite flex items-center justify-center">
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-12 max-w-md w-full text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Order Placed Successfully!</h1>
-          <p className="text-slate-600 dark:text-slate-400 mb-4">Your wholesale order has been confirmed</p>
-          <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-4 mb-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400">Order ID</p>
-            <p className="text-xl font-bold text-v2v-deep dark:text-purple-400">{orderId}</p>
-          </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-            You will receive a confirmation email at {formData.email}
-          </p>
-          <div className="space-y-3">
-            <Link
-              to="/dealer/orders"
-              className="block w-full py-3 bg-v2v-gradient text-white rounded-lg font-bold hover:opacity-90 transition-colors"
-            >
-              View Order Details
-            </Link>
-            <Link
-              to="/dealer"
-              className="block w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-300 transition-colors"
-            >
-              Return to Home
-            </Link>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Your cart is empty</h2>
+          <button onClick={() => navigate('/dealer/products')} className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+            Browse Products
+          </button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br bg-v2v-softwhite">
-      <div className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/dealer/cart" className="text-v2v-deep dark:text-purple-400 hover:text-v2v-deep dark:text-purple-400 font-bold">
-              ← Back to Cart
-            </Link>
-            <span className="text-slate-600 dark:text-slate-400">WHOLESALE CHECKOUT (DEMO)</span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <PortalNavbar portal="dealer" />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Checkout</h1>
-          <p className="text-slate-600 dark:text-slate-400">Complete your wholesale order details</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Business Information</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Business Name *</label>
-                  <input
-                    type="text"
-                    name="businessName"
-                    value={formData.businessName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                    placeholder="Your Business Name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">GST Number</label>
-                  <input
-                    type="text"
-                    name="gstNumber"
-                    value={formData.gstNumber}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Contact Information</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Full Name *</label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                    placeholder="Contact Person"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Email *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                    placeholder="business@example.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Phone *</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                    placeholder="+91 98765 43210"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Delivery Address</h2>
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Checkout Form */}
+          <div className="flex-1">
+            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6">Business Information</h2>
+              
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Street Address *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                   <input
                     type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
                     required
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                    placeholder="Warehouse/Shop address"
                   />
                 </div>
-                <div className="grid md:grid-cols-3 gap-4">
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">City *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                     <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2"
                       required
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                      placeholder="City"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">State *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
                     <input
-                      type="text"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2"
                       required
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                      placeholder="State"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">PIN Code *</label>
-                    <input
-                      type="text"
-                      name="pincode"
-                      value={formData.pincode}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                      placeholder="PIN Code"
                     />
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Delivery Preferences</h2>
-              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Business Name *</label>
+                    <input
+                      type="text"
+                      value={formData.businessName}
+                      onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">GST Number</label>
+                    <input
+                      type="text"
+                      value={formData.gstNumber}
+                      onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Preferred Delivery Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                  <textarea
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    rows="3"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                    <input
+                      type="text"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">PIN Code *</label>
+                    <input
+                      type="text"
+                      value={formData.pincode}
+                      onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Delivery Date</label>
                   <input
                     type="date"
-                    name="deliveryDate"
                     value={formData.deliveryDate}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
+                    onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Preferred Time Slot</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
                   <select
-                    name="deliveryTime"
-                    value={formData.deliveryTime}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
+                    value={formData.paymentMethod}
+                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    required
                   >
-                    <option value="">Select time slot</option>
-                    <option value="morning">Morning (9AM - 12PM)</option>
-                    <option value="afternoon">Afternoon (12PM - 4PM)</option>
-                    <option value="evening">Evening (4PM - 8PM)</option>
+                    <option value="cod">Cash on Delivery</option>
+                    <option value="upi">UPI</option>
+                    <option value="card">Credit/Debit Card</option>
+                    <option value="bank_transfer">Bank Transfer</option>
                   </select>
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Payment Method</h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    id="upi"
-                    name="paymentMethod"
-                    value="upi"
-                    checked={formData.paymentMethod === 'upi'}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 text-v2v-deep dark:text-purple-400"
-                  />
-                  <label htmlFor="upi" className="text-slate-700 dark:text-slate-300 dark:text-slate-300">UPI Payment</label>
-                </div>
-                {formData.paymentMethod === 'upi' && (
-                  <div>
-                    <input
-                      type="text"
-                      name="upiId"
-                      value={formData.upiId}
-                      onChange={handleInputChange}
-                      placeholder="Enter UPI ID (e.g., business@upi)"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    id="card"
-                    name="paymentMethod"
-                    value="card"
-                    checked={formData.paymentMethod === 'card'}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 text-v2v-deep dark:text-purple-400"
-                  />
-                  <label htmlFor="card" className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Credit/Debit Card</label>
-                </div>
-                {formData.paymentMethod === 'card' && (
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      name="cardNumber"
-                      value={formData.cardNumber}
-                      onChange={handleInputChange}
-                      placeholder="Card Number"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        name="cardExpiry"
-                        value={formData.cardExpiry}
-                        onChange={handleInputChange}
-                        placeholder="MM/YY"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                      />
-                      <input
-                        type="text"
-                        name="cardCvv"
-                        value={formData.cardCvv}
-                        onChange={handleInputChange}
-                        placeholder="CVV"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    id="bank"
-                    name="paymentMethod"
-                    value="bank"
-                    checked={formData.paymentMethod === 'bank'}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 text-v2v-deep dark:text-purple-400"
-                  />
-                  <label htmlFor="bank" className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Bank Transfer</label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 sticky top-4">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-6">Order Summary</h2>
-
-              <div className="space-y-3 mb-6">
-                {cart.map((item, index) => (
-                  <div key={index} className="flex justify-between text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">{item.name} ({item.quantity}kg)</span>
-                    <span className="font-medium">₹{(item.pricePerKg * item.quantity).toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-slate-200 pt-4 space-y-2 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">₹{cartTotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600 dark:text-slate-400">Delivery Fee</span>
-                  <span className="font-bold text-v2v-deep dark:text-purple-400">FREE</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600 dark:text-slate-400">Tax (GST)</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">₹0</span>
-                </div>
-                <div className="border-t border-slate-200 pt-2">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">Total</span>
-                    <span className="text-2xl font-bold text-v2v-deep dark:text-purple-400">₹{cartTotal.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4 mb-6">
-                <p className="text-sm text-v2v-deep dark:text-purple-400">
-                  <strong>Demo Mode:</strong> This is a simulated checkout. No real payments will be processed.
-                </p>
               </div>
 
               <button
                 type="submit"
                 disabled={isProcessing}
-                className="w-full py-3 bg-gradient-to-r from-v2v-gradient to-indigo-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isProcessing ? 'Processing...' : 'Place Order →'}
+                {isProcessing ? 'Processing...' : 'Place Order'}
               </button>
+            </form>
+          </div>
+
+          {/* Order Summary */}
+          <div className="lg:w-96">
+            <div className="bg-white rounded-xl shadow p-6 sticky top-4">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Order Summary</h2>
+              
+              <div className="space-y-3 mb-4">
+                {cart.map((item) => (
+                  <div key={item.productId} className="flex justify-between text-sm">
+                    <span>{item.name} ({item.quantity} kg)</span>
+                    <span>₹{(item.pricePerKg * item.quantity).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-bold">₹{total.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Delivery</span>
+                  <span className="font-bold">₹{deliveryCharge}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="text-lg font-bold text-gray-800">Total</span>
+                  <span className="text-lg font-bold text-blue-600">₹{(total + deliveryCharge).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                <p className="text-xs text-blue-800">
+                  ℹ️ Demo Order: This is a simulated checkout process. No actual payment will be processed.
+                </p>
+              </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )

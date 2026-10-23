@@ -1,15 +1,22 @@
 import React from 'react'
+import Icon from '../components/common/Icon'
 import { Link, useNavigate } from 'react-router-dom'
 import V2VLogo from '../components/common/V2VLogo'
 import { useAuth } from '../contexts/AuthContext'
 import ThemeToggle from '../components/common/ThemeToggle'
 
-import { useSmartGoBack } from '../lib/navigationHistory'
-
 export default function LandingPage() {
   const { user, loginDemo, logout } = useAuth()
   const navigate = useNavigate()
-  const { handleGoBack } = useSmartGoBack()
+
+  const handleGoBack = (e) => {
+    if (e) e.preventDefault()
+    if (window.history.state && typeof window.history.state.idx === 'number' && window.history.state.idx > 0) {
+      navigate(-1)
+    } else {
+      navigate('/')
+    }
+  }
 
   const handleLaunchRole = (role) => {
     loginDemo(role)
@@ -145,14 +152,14 @@ export default function LandingPage() {
                 onClick={() => handleLaunchRole('farmer')}
                 className="btn-v2v-gradient text-base px-7 py-3.5 flex items-center gap-2.5 rounded-xl shadow-lg shadow-v2v-lavender/30 hover:scale-[1.02] transition-transform"
               >
-                <span>🧑‍🌾</span>
+                <Icon name="user" size={16} className="inline mr-1 text-emerald-400" />
                 <span>Launch Farmer Portal Demo</span>
               </button>
               <button
                 onClick={() => handleLaunchRole('admin')}
                 className="btn-secondary text-base px-7 py-3.5 flex items-center gap-2.5 rounded-xl bg-white hover:bg-v2v-softwhite text-v2v-deep font-semibold shadow-sm hover:border-v2v-lavender transition-all"
               >
-                <span>⚙️</span>
+                <Icon name="settings" size={16} className="inline mr-1 text-purple-400" />
                 <span>Admin Management Platform</span>
               </button>
             </div>
@@ -207,7 +214,7 @@ export default function LandingPage() {
             <div className="card-hover p-6 rounded-2xl border border-v2v-lavendergray bg-white relative flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-v2v-deep text-white flex items-center justify-center text-xl shadow-md shadow-v2v-deep/20 mb-5">
-                  🗺️
+                  <Icon name="map" size={28} className="text-emerald-400 inline" />
                 </div>
                 <h3 className="text-lg font-bold text-v2v-deep mb-2">Exact Land Boundary Mapping</h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
@@ -224,7 +231,7 @@ export default function LandingPage() {
             <div className="card-hover p-6 rounded-2xl border border-v2v-lavendergray bg-white relative flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-v2v-electric text-white flex items-center justify-center text-xl shadow-md shadow-v2v-electric/20 mb-5">
-                  💧
+                  <Icon name="water" size={28} className="text-blue-400 inline" />
                 </div>
                 <h3 className="text-lg font-bold text-v2v-deep mb-2">Borewell & Water Intelligence</h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
@@ -241,7 +248,7 @@ export default function LandingPage() {
             <div className="card-hover p-6 rounded-2xl border border-v2v-lavendergray bg-white relative flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-v2v-secondary text-white flex items-center justify-center text-xl shadow-md shadow-v2v-secondary/20 mb-5">
-                  📹
+                  <Icon name="camera" size={28} className="text-purple-400 inline" />
                 </div>
                 <h3 className="text-lg font-bold text-v2v-deep mb-2">Autonomous CCTV Surveillance</h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
@@ -258,7 +265,7 @@ export default function LandingPage() {
             <div className="card-hover p-6 rounded-2xl border border-v2v-lavendergray bg-white relative flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-v2v-lavender text-white flex items-center justify-center text-xl shadow-md shadow-v2v-lavender/20 mb-5">
-                  🧠
+                  <Icon name="activity" size={28} className="text-amber-400 inline" />
                 </div>
                 <h3 className="text-lg font-bold text-v2v-deep mb-2">IoT Telemetry & AI Scoring</h3>
                 <p className="text-xs text-gray-600 leading-relaxed">
@@ -281,7 +288,7 @@ export default function LandingPage() {
             {/* Left Content */}
             <div className="lg:col-span-6 space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-v2v-deep text-xs font-bold">
-                <span>🧑‍🌾</span>
+                <Icon name="user" size={16} className="inline mr-1 text-emerald-400" />
                 <span>Dedicated Farmer Experience</span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-v2v-deep tracking-tight">
@@ -327,7 +334,7 @@ export default function LandingPage() {
                 {/* Mock Card Top Header */}
                 <div className="bg-v2v-deep text-white px-5 py-4 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-lg">🌾</span>
+                    <Icon name="sprout" size={20} className="text-emerald-400 inline mr-2" />
                     <div>
                       <div className="font-bold text-sm">Ganesh V.'s Smart Farmland</div>
                       <div className="text-[11px] text-v2v-lavendergray">Pollachi, Tamil Nadu · 21.4 Acres (8.66 Ha)</div>
@@ -361,7 +368,7 @@ export default function LandingPage() {
                     {/* Interactive Pop-up Mock */}
                     <div className="bg-white/95 text-gray-900 rounded-lg p-2.5 shadow-lg border border-v2v-lavendergray text-xs space-y-1">
                       <div className="font-bold text-v2v-deep flex items-center justify-between">
-                        <span>💧 Solar Borewell #1</span>
+                        <span><Icon name="water" size={28} className="text-blue-400 inline" /> Solar Borewell #1</span>
                         <span className="text-[10px] text-emerald-600 font-semibold">ONLINE</span>
                       </div>
                       <div className="text-[11px] text-gray-600">
@@ -490,7 +497,7 @@ export default function LandingPage() {
             {/* Right Content */}
             <div className="lg:col-span-6 order-1 lg:order-2 space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-v2v-dark text-white text-xs font-bold">
-                <span>⚙️</span>
+                <Icon name="settings" size={16} className="inline mr-1 text-purple-400" />
                 <span>Enterprise Admin Portal</span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-v2v-deep tracking-tight">

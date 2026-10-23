@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.core.access import ensure_staff, ensure_admin, farmer_scope_id
 from app.models.farmer import Farmer
 from app.models.user import User
 from app.schemas.farmer import FarmerCreate, FarmerUpdate, FarmerRead
@@ -25,8 +26,9 @@ def create_farmer(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Create a new farmer profile in the registry.
+    Create a new farmer profile in the registry. Requires staff role.
     """
+    ensure_staff(current_user)
     farmer = Farmer(**payload.model_dump())
     db.add(farmer)
     db.commit()
@@ -45,8 +47,13 @@ def list_farmers(
 ):
     """
     Retrieve a paginated list of registered farmers.
+    Farmers receive only their own farmer profile.
     """
     query = db.query(Farmer)
+    if current_user.role == "farmer":
+        fid = farmer_scope_id(db, current_user)
+        query = query.filter(Farmer.id == fid)
+        
     total = query.count()
     farmers = query.offset(skip).limit(limit).all()
     
@@ -73,6 +80,13 @@ def get_farmer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Farmer with ID '{farmer_id}' not found."
         )
+    if current_user.role == "farmer":
+        fid = farmer_scope_id(db, current_user)
+        if farmer.id != fid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only view your own farmer profile."
+            )
     return farmer
 
 
@@ -84,8 +98,9 @@ def update_farmer(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Update farmer details.
+    Update farmer details. Requires staff role.
     """
+    ensure_staff(current_user)
     farmer = db.get(Farmer, farmer_id)
     if not farmer:
         raise HTTPException(
@@ -111,8 +126,9 @@ def delete_farmer(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Delete a specific farmer.
+    Delete a specific farmer. Requires admin role.
     """
+    ensure_admin(current_user)
     farmer = db.get(Farmer, farmer_id)
     if not farmer:
         raise HTTPException(

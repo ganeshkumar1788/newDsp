@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 /* Leaflet container must have an explicit height */
 .leaflet-container {
@@ -123,68 +123,79 @@
 }
 
 /* ────────────────────────────────────────────────────────── */
-/* Professional Dark Mode Global Override Styles              */
+/* Professional Dark Mode & WCAG AA Contrast Styles           */
 /* ────────────────────────────────────────────────────────── */
-html.dark,
-body.dark {
+html.dark:not(:has(.agrimap-auth-page)),
+body.dark:not(:has(.agrimap-auth-page)) {
   color-scheme: dark;
-  background-color: #0b0f19 !important;
-  color: #f1f5f9 !important;
+  background-color: #131313 !important;
+  color: #F4F3F9 !important;
 }
 
-html.dark body,
-html.dark #root {
-  background-color: #0b0f19 !important;
-  color: #f1f5f9 !important;
+html.dark body:not(:has(.agrimap-auth-page)),
+html.dark #root:not(:has(.agrimap-auth-page)) {
+  background-color: #131313 !important;
+  color: #F4F3F9 !important;
+}
+
+html:has(.agrimap-auth-page),
+body:has(.agrimap-auth-page),
+body:has(.agrimap-auth-page) #root {
+  background-color: #F5F3FA !important;
 }
 
 /* Page containers & App Layout */
-html.dark main,
+html.dark main:not(.agrimap-login-container):not(.agrimap-register-container),
 html.dark .bg-v2v-softwhite,
 html.dark .bg-\[\#F4F3F9\],
 html.dark .bg-slate-50 {
-  background-color: #0b0f19 !important;
-  color: #f1f5f9 !important;
+  background-color: #131313 !important;
+  color: #F4F3F9 !important;
 }
 
-/* White surfaces transform into dark slate surfaces */
-html.dark .bg-white {
-  background-color: #111827 !important; /* dark slate-900 */
-  color: #f1f5f9 !important;
+/* White surfaces transform into V2V deep purple surfaces */
+html.dark .bg-white:not(.agrimap-auth-page *) {
+  background-color: #1E1035 !important;
+  color: #F4F3F9 !important;
 }
 
 /* Header & Navigation top bars */
-html.dark header {
-  background-color: #0f172a !important; /* dark slate-900 header */
-  border-color: #1e293b !important;
+html.dark header:not(.agrimap-auth-header):not(.agrimap-auth-page *) {
+  background-color: #160A29 !important;
+  border-color: #2E1B4E !important;
 }
 
 /* Cards & Panels */
-html.dark .card,
-html.dark .card-hover,
-html.dark .card-interactive {
-  background-color: #1e293b !important; /* slate-800 card */
-  border-color: #334155 !important;
-  color: #f8fafc !important;
+html.dark .card:not(.agrimap-auth-page *),
+html.dark .card-hover:not(.agrimap-auth-page *),
+html.dark .card-interactive:not(.agrimap-auth-page *) {
+  background-color: #1E1035 !important;
+  border-color: #3C1E66 !important;
+  color: #F4F3F9 !important;
 }
 
-/* Typography & Headings */
+/* Typography & Headings (WCAG AA >= 4.5:1 / 3:1) */
 html.dark h1,
 html.dark h2,
 html.dark h3,
 html.dark h4,
 html.dark h5,
-html.dark h6,
+html.dark h6 {
+  color: #FFFFFF !important;
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-weight: 700;
+}
+
 html.dark .text-v2v-deep,
 html.dark .text-gray-900,
 html.dark .text-gray-800,
 html.dark .text-gray-700 {
-  color: #f8fafc !important;
+  color: #F4F3F9 !important;
 }
 
 html.dark .text-gray-600,
 html.dark .text-gray-500 {
-  color: #94a3b8 !important; /* slate-400 */
+  color: #D9C7FF !important;
 }
 
 /* Borders & Dividers */
@@ -193,45 +204,97 @@ html.dark .border-v2v-lavendergray,
 html.dark .border-gray-100,
 html.dark .border-gray-200,
 html.dark .border-gray-300 {
-  border-color: #334155 !important;
+  border-color: #3C1E66 !important;
 }
 
 /* Form Inputs & Select elements */
-html.dark input,
-html.dark select,
-html.dark textarea,
-html.dark .input-field {
-  background-color: #1e293b !important;
-  color: #f8fafc !important;
-  border-color: #334155 !important;
+html.dark:not(:has(.agrimap-auth-page)) input,
+html.dark:not(:has(.agrimap-auth-page)) select,
+html.dark:not(:has(.agrimap-auth-page)) textarea,
+html.dark:not(:has(.agrimap-auth-page)) .input-field {
+  background-color: #160A29 !important;
+  color: #F4F3F9 !important;
+  border-color: #4A287D !important;
 }
 
 html.dark input::placeholder,
 html.dark textarea::placeholder {
-  color: #64748b !important;
+  color: #A996C8 !important;
 }
 
 /* Table rows & headers */
 html.dark table th {
-  background-color: #0f172a !important;
-  color: #cbd5e1 !important;
-  border-color: #334155 !important;
+  background-color: #160A29 !important;
+  color: #D9C7FF !important;
+  border-color: #3C1E66 !important;
 }
 
 html.dark table td {
-  border-color: #1e293b !important;
-  color: #f1f5f9 !important;
+  border-color: #2E1B4E !important;
+  color: #F4F3F9 !important;
 }
 
 html.dark tr:hover {
-  background-color: rgba(30, 41, 59, 0.6) !important;
+  background-color: rgba(60, 23, 117, 0.25) !important;
 }
 
 /* Badges & Modals */
 html.dark .modal-content {
-  background-color: #0f172a !important;
-  border-color: #334155 !important;
-  color: #f8fafc !important;
+  background-color: #1E1035 !important;
+  border-color: #4A287D !important;
+  color: #F4F3F9 !important;
 }
+
+/* Dark Mode Scrollbars & Design Tokens */
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F4F3F9;
+  --text-primary: #131313;
+  --text-secondary: #5E4678;
+  --accent: #3C1775;
+}
+
+html.dark {
+  --bg-primary: #131313;
+  --bg-secondary: #1E1035;
+  --bg-tertiary: #2A0C58;
+  --text-primary: #FFFFFF;
+  --text-secondary: #D9C7FF;
+  --accent: #8A57C0;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #131313;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #3C1E66;
+  border-radius: 4px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #5E4678;
+}
+
+/* Google Maps Error Popup Suppression */
+.gm-err-container,
+.gm-err-content,
+.gm-err-autocomplete,
+div[class*="gm-err-"],
+.gm-style .gm-err-container,
+.degraded-map-dialog-view,
+div[class*="degraded-map"],
+div[role="alertdialog"],
+.gm-style > div:has(div[role="alertdialog"]),
+.gm-style-cc + div:has(a[href*="error-messages"]) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+}
+
 
 

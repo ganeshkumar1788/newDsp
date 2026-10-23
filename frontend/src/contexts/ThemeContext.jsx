@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 const ThemeContext = createContext(null)
 
 export function ThemeProvider({ children }) {
-  // Default mode is 'light' as requested
+  // Default mode is 'light' matching reference designs
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('agrimap_theme')
     return saved === 'dark' ? 'dark' : 'light'

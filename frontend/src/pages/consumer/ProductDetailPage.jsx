@@ -1,253 +1,185 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { DEMO_PRODUCTS, PRODUCE_CATEGORIES, GRADE_CLASSIFICATIONS, RIPENESS_STAGES, addToCart, getCart } from '../../lib/consumerData.js'
-import { getPricingRecommendation, calculateTotalCost } from '../../lib/aiPricingEngine.js'
-import { getMarketPriceComparison, getDemandAnalysis } from '../../lib/marketIntelligence.js'
-import { useSmartGoBack } from '../../lib/navigationHistory.js'
+import React from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { PRODUCE_CATEGORIES, GRADE_CLASSIFICATIONS, RIPENESS_STAGES, DEMO_PRODUCTS } from '../../lib/consumerData.js'
+import { getPricingRecommendation, generatePriceTiers, calculateTotalCost } from '../../lib/aiPricingEngine.js'
+import { addToCart } from '../../lib/consumerData.js'
+import PortalNavbar from '../../components/common/PortalNavbar.jsx'
 
 export default function ProductDetailPage() {
-  const { handleGoBack } = useSmartGoBack()
   const { id } = useParams()
-  const [product, setProduct] = useState(null)
-  const [quantity, setQuantity] = useState(1)
-  const [cart, setCart] = useState([])
-
-  useEffect(() => {
-    const foundProduct = DEMO_PRODUCTS.find(p => p.id === id)
-    setProduct(foundProduct)
-    setCart(getCart())
-  }, [id])
-
-  const handleAddToCart = () => {
-    if (product) {
-      const updatedCart = addToCart(product, quantity)
-      setCart(updatedCart)
-      alert(`${product.name} (${quantity}kg) added to cart!`)
-    }
-  }
-
+  const navigate = useNavigate()
+  const [quantity, setQuantity] = React.useState(10)
+  
+  const product = DEMO_PRODUCTS.find(p => p.id === id)
+  
   if (!product) {
     return (
-      <div className="min-h-screen bg-gradient-to-br bg-v2v-softwhite flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4">🔍</div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Product Not Found</h2>
-          <Link to="/consumer/products" className="text-v2v-deep dark:text-purple-400 hover:text-v2v-deep dark:text-purple-400 font-bold">
-            Browse Products
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Product not found</h2>
+          <Link to="/consumer/products" className="text-green-600 hover:text-green-700">
+            ← Back to Products
           </Link>
         </div>
       </div>
     )
   }
 
-  const pricing = getPricingRecommendation(product)
-  const marketComparison = getMarketPriceComparison(product)
-  const demand = getDemandAnalysis(product.category)
-  const totalCost = calculateTotalCost(product, quantity)
+  const pricingRecommendation = getPricingRecommendation(product)
+  const priceTiers = generatePriceTiers(product)
+  const costCalculation = calculateTotalCost(product, quantity)
+
+  const handleAddToCart = () => {
+    addToCart(product, quantity)
+    alert(`${product.name} (${quantity} kg) added to cart!`)
+    navigate('/consumer/cart')
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br bg-v2v-softwhite">
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleGoBack}
-              className="text-v2v-deep dark:text-purple-400 hover:text-v2v-lavender dark:hover:text-purple-300 font-bold flex items-center gap-1 cursor-pointer"
-            >
-              ← Back to Products
-            </button>
-            <span className="text-slate-600 dark:text-slate-400">DEMO PRODUCT DETAILS</span>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <PortalNavbar portal="consumer" />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Product Image */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-8">
-            <div className="h-80 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-lg flex items-center justify-center text-9xl">
-              {PRODUCE_CATEGORIES[product.category]?.icon || '🥬'}
+          <div className="lg:w-1/2">
+            <div className="rounded-2xl h-96 overflow-hidden shadow-lg border border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-900 relative">
+              <img
+                src={product.imageUrl || '/images/products/durum_wheat.jpg'}
+                alt={product.name}
+                loading="lazy"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/images/products/durum_wheat.jpg';
+                }}
+              />
+              <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/60 text-[10px] text-white/90 backdrop-blur-sm">
+                Illustrative image
+              </span>
             </div>
+            <p className="text-[11px] text-gray-400 dark:text-slate-400 mt-1.5 italic">
+              * Illustrative image. Actual produce appearance may naturally vary by harvest lot.
+            </p>
           </div>
 
           {/* Product Info */}
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                {product.isOrganic && (
-                  <span className="bg-green-100 text-v2v-deep dark:text-purple-400 text-sm px-3 py-1 rounded-full font-medium">
-                    Organic Certified
-                  </span>
-                )}
-                <span className="bg-blue-100 text-purple-700 dark:text-purple-300 text-sm px-3 py-1 rounded-full font-medium">
-                  Quality Score: {product.qualityScore}/100
+          <div className="lg:w-1/2">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">{product.name}</h1>
+            <p className="text-lg text-gray-600 mb-4">{product.description}</p>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                {GRADE_CLASSIFICATIONS[product.grade]?.name}
+              </span>
+              <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                {RIPENESS_STAGES[product.ripeness]?.name}
+              </span>
+              {product.isOrganic && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  Organic
                 </span>
-              </div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">{product.name}</h1>
-              <p className="text-lg text-slate-600 dark:text-slate-400">{product.variety}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Farmer</p>
-                <p className="font-bold text-slate-900 dark:text-slate-100">{product.farmerName}</p>
-              </div>
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Location</p>
-                <p className="font-bold text-slate-900 dark:text-slate-100">{product.location}</p>
-              </div>
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Harvest Date</p>
-                <p className="font-bold text-slate-900 dark:text-slate-100">{product.harvestDate}</p>
-              </div>
-              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Shelf Life</p>
-                <p className="font-bold text-slate-900 dark:text-slate-100">{product.shelfLifeDays} days</p>
-              </div>
-            </div>
-
-            {/* Grade and Ripeness */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Grade</p>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    {GRADE_CLASSIFICATIONS[product.grade]?.icon} {GRADE_CLASSIFICATIONS[product.grade]?.name}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Ripeness</p>
-                  <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    {RIPENESS_STAGES[product.ripeness]?.icon} {RIPENESS_STAGES[product.ripeness]?.name}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* AI Pricing Recommendation */}
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
-              <h3 className="text-lg font-bold text-purple-800 dark:text-purple-200 mb-4 flex items-center gap-2">
-                🤖 AI Price Recommendation
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Recommended Price:</span>
-                  <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">₹{pricing.recommendedPrice}/kg</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Price Range:</span>
-                  <span className="text-slate-900 dark:text-slate-100">₹{pricing.priceRange.min} - ₹{pricing.priceRange.max}/kg</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Confidence Level:</span>
-                  <span className="text-slate-900 dark:text-slate-100">{(pricing.confidence * 100).toFixed(0)}%</span>
-                </div>
-                <div className="pt-3 border-t border-purple-200 dark:border-purple-800">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Factors considered:</p>
-                  <ul className="text-sm text-slate-700 dark:text-slate-300 dark:text-slate-300 space-y-1">
-                    {pricing.explanation.map((factor, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <span className="text-blue-500">•</span> {factor}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="text-xs text-purple-600 dark:text-purple-400 italic mt-3">
-                  * All pricing recommendations are simulated for demonstration
-                </p>
-              </div>
-            </div>
-
-            {/* Market Comparison */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                📊 Market Comparison
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Current Price:</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">₹{marketComparison.currentPrice}/kg</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Market Price ({marketComparison.marketSource}):</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">₹{marketComparison.marketPrice}/kg</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Difference:</span>
-                  <span className={`font-bold ${marketComparison.isBelowMarket ? 'text-v2v-deep dark:text-purple-400' : 'text-red-600'}`}>
-                    {marketComparison.isBelowMarket ? '↓' : '↑'} ₹{Math.abs(marketComparison.priceDifference)}/kg
-                    ({marketComparison.percentageDifference}%)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Demand Analysis */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                📈 Demand Analysis
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Current Demand:</span>
-                  <span className={`font-bold ${demand.current === 'High' || demand.current === 'Very High' ? 'text-v2v-deep dark:text-purple-400' : 'text-slate-900 dark:text-slate-100'}`}>
-                    {demand.current}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Season:</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{demand.season}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 dark:text-slate-300">Demand Trend:</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{demand.demand}</span>
-                </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{demand.forecast}</p>
-              </div>
-            </div>
-
-            {/* Quantity and Add to Cart */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Quantity (kg)</label>
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    min="1"
-                    max={product.availableQuantity}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Total Cost</p>
-                  <p className="text-2xl font-bold text-v2v-deep dark:text-purple-400">₹{totalCost.totalCost.toLocaleString()}</p>
-                  {totalCost.savings > 0 && (
-                    <p className="text-sm text-v2v-deep dark:text-purple-400">
-                      Save ₹{totalCost.savings} ({totalCost.savingsPercentage}% discount)
-                    </p>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={handleAddToCart}
-                disabled={quantity > product.availableQuantity}
-                className={`w-full py-3 rounded-lg font-bold ${
-                  quantity <= product.availableQuantity
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                } transition-colors`}
-              >
-                Add to Cart
-              </button>
-              {quantity > product.availableQuantity && (
-                <p className="text-sm text-red-600 mt-2 text-center">
-                  Only {product.availableQuantity} kg available
-                </p>
               )}
             </div>
+
+            <div className="space-y-2 mb-6">
+              <p><strong>Variety:</strong> {product.variety}</p>
+              <p><strong>Location:</strong> {product.location}</p>
+              <p><strong>Farmer:</strong> {product.farmerName}</p>
+              <p><strong>Harvest Date:</strong> {product.harvestDate}</p>
+              <p><strong>Shelf Life:</strong> {product.shelfLifeDays} days</p>
+              <p><strong>Available Quantity:</strong> {product.availableQuantity} kg</p>
+              <p><strong>Quality Score:</strong> {product.qualityScore}/100</p>
+            </div>
+
+            <div className="border-t pt-4 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-3xl font-bold text-green-600">₹{product.pricePerKg}/kg</span>
+                <span className="text-gray-500">Base price</span>
+              </div>
+
+              {/* AI Price Recommendation */}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                <h3 className="font-bold text-purple-800 mb-2">🤖 AI Price Recommendation</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-2xl font-bold text-purple-600">
+                    ₹{pricingRecommendation.recommendedPrice}/kg
+                  </span>
+                  <span className="text-sm text-purple-600">
+                    Range: ₹{pricingRecommendation.priceRange.min} - ₹{pricingRecommendation.priceRange.max}
+                  </span>
+                </div>
+                <p className="text-sm text-purple-700 mb-2">
+                  Confidence: {(pricingRecommendation.confidence * 100).toFixed(0)}%
+                </p>
+                <ul className="text-sm text-purple-700 space-y-1">
+                  {pricingRecommendation.explanation.map((exp, i) => (
+                    <li key={i}>• {exp}</li>
+                  ))}
+                </ul>
+                <p className="text-xs text-purple-500 mt-2">
+                  ℹ️ {pricingRecommendation.isSimulated ? 'Simulated recommendation - rule-based pricing engine' : 'ML model prediction'}
+                </p>
+              </div>
+
+              {/* Price Tiers */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-bold text-blue-800 mb-2">📊 Bulk Price Tiers</h3>
+                <div className="space-y-2">
+                  {priceTiers.map((tier, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span>{tier.minQuantity}-{tier.maxQuantity} kg:</span>
+                      <span className="font-bold">₹{tier.pricePerKg}/kg ({tier.discount} off)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Quantity Selector */}
+            <div className="border-t pt-4 mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity (kg)</label>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 10))}
+                  className="w-10 h-10 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                  className="w-24 border rounded-lg px-3 py-2 text-center"
+                />
+                <button
+                  onClick={() => setQuantity(quantity + 10)}
+                  className="w-10 h-10 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Cost Calculation */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-700">Total Cost:</span>
+                <span className="text-2xl font-bold text-green-600">₹{costCalculation.totalCost.toLocaleString()}</span>
+              </div>
+              {costCalculation.savings > 0 && (
+                <div className="text-sm text-green-700">
+                  You save: ₹{costCalculation.savings.toLocaleString()} ({costCalculation.savingsPercentage}%)
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleAddToCart}
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors"
+            >
+              Add to Cart 🛒
+            </button>
           </div>
         </div>
       </div>

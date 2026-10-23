@@ -1,50 +1,40 @@
 import React, { useState } from 'react'
-import { Outlet, NavLink, useNavigate, Link, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigateWithLoader } from '../../contexts/NavigationLoaderContext'
 import V2VLogo from '../common/V2VLogo'
 import ThemeToggle from '../common/ThemeToggle'
-import { useSmartGoBack } from '../../lib/navigationHistory'
+import { changeRequestStorage } from '../../lib/changeRequestStorage'
 
 const NAV_LINKS = [
-  // ── FARMER (strictly restricted to their own land) ──
-  { to: '/farmer',         label: 'Farmland Digital Twin',  icon: MapIcon,        roles: ['farmer'] },
-  { to: '/farmer/sell',    label: 'Sell Produce',           icon: UploadIcon,     roles: ['farmer'] },
-
-  // ── ADMIN (ONLY: Farmers List, New Farmer Requests, Surveyor Creation) ──
-  { to: '/admin/farmers',  label: 'Farmers List',            icon: UsersIcon,      roles: ['admin'] },
-  { to: '/admin/farmers?tab=requests', label: 'New Farmer Requests', icon: RequestsIcon, roles: ['admin'] },
-  { to: '/admin/surveyors', label: 'Surveyor Creation',      icon: SurveyorIcon,   roles: ['admin'] },
-  { to: '/admin/demand-insights', label: 'Demand Insights',  icon: ChartIcon,     roles: ['admin'] },
-
-  // ── VERIFIER (All operational, drawing, twin & market controls) ──
-  { to: '/farmer',         label: 'Farmland Digital Twin',  icon: MapIcon,        roles: ['verifier'] },
-  { to: '/admin/editor/field-1', label: 'Land & Drawing Editor', icon: EditIcon, roles: ['verifier'] },
-  { to: '/dashboard',      label: 'Platform Overview',      icon: HomeIcon,       roles: ['verifier'] },
-  { to: '/admin/farmers',  label: 'Farmers Directory',      icon: UsersIcon,      roles: ['verifier'] },
-  { to: '/surveyor/sell',  label: 'Add Farmer Goods',        icon: UploadIcon,     roles: ['verifier'] },
-  { to: '/marketplace',    label: 'Marketplace Hub',        icon: StoreIcon,      roles: ['verifier'] },
-  { to: '/data-tools',     label: 'Export & Reports',       icon: UploadIcon,     roles: ['verifier'] },
-
-  // ── CONSUMER ──
-  { to: '/consumer',       label: 'Consumer Home',          icon: HomeIcon,       roles: ['consumer'] },
-  { to: '/consumer/products', label: 'Browse Products',     icon: StoreIcon,      roles: ['consumer'] },
-  { to: '/consumer/cart',  label: 'Shopping Cart',          icon: ChipIcon,       roles: ['consumer'] },
-  { to: '/consumer/orders', label: 'My Orders',             icon: UsersIcon,      roles: ['consumer'] },
-
-  // ── DEALER ──
-  { to: '/dealer',         label: 'Dealer Home',             icon: HomeIcon,       roles: ['dealer'] },
-  { to: '/dealer/products', label: 'Browse Products',        icon: StoreIcon,      roles: ['dealer'] },
-  { to: '/dealer/bulk-buying', label: 'Bulk Buying',         icon: UploadIcon,     roles: ['dealer'] },
-  { to: '/dealer/cart',    label: 'Shopping Cart',           icon: ChipIcon,       roles: ['dealer'] },
-  { to: '/dealer/orders',  label: 'My Orders',              icon: UsersIcon,      roles: ['dealer'] },
+  { to: '/farmer',         label: 'Farmland Digital Twin',  icon: MapIcon,    roles: ['farmer', 'admin', 'verifier', 'land_verifier'] },
+  { to: '/farmer/sell',    label: 'Sell Produce',           icon: UploadIcon, roles: ['farmer'] },
+  { to: '/surveyor/sell',  label: 'Add Farmer Goods',       icon: UploadIcon, roles: ['verifier', 'land_verifier'] },
+  { to: '/admin/requests', label: 'Farmer Requests',        icon: InboxIcon,  roles: ['admin', 'verifier', 'land_verifier'], badge: 'requests' },
+  { to: '/admin/farmers',  label: 'Farmers Directory',      icon: UsersIcon,  roles: ['admin', 'verifier', 'land_verifier'] },
+  { to: '/admin/demand-insights', label: 'Demand Insights', icon: ChartIcon,  roles: ['admin', 'verifier', 'land_verifier'] },
+  { to: '/admin/editor/field-1', label: 'Land & Drawing Editor', icon: EditIcon, roles: ['admin', 'verifier', 'land_verifier'] },
+  { to: '/dashboard',      label: 'Platform Overview',      icon: HomeIcon,   roles: ['admin', 'verifier', 'land_verifier'] },
+  { to: '/marketplace',    label: 'Marketplace Hub',        icon: StoreIcon,  roles: ['consumer', 'admin'] },
+  { to: '/data-tools',     label: 'Export & Reports',       icon: UploadIcon, roles: ['admin', 'verifier', 'land_verifier'] },
+  { to: '/admin/surveyors', label: 'Surveyor Management',    icon: UsersIcon,  roles: ['admin', 'land_verifier'] },
+  { to: '/users',          label: 'System Access',          icon: KeyIcon,    roles: ['admin'] },
+  { to: '/consumer',       label: 'Consumer Home',          icon: HomeIcon,   roles: ['consumer'] },
+  { to: '/consumer/products', label: 'Browse Products',        icon: StoreIcon,  roles: ['consumer'] },
+  { to: '/consumer/bulk-buying', label: 'Bulk Buying',           icon: StoreIcon,  roles: ['consumer'] },
+  { to: '/consumer/cart',    label: 'Shopping Cart',          icon: StoreIcon,  roles: ['consumer'] },
+  { to: '/consumer/orders',   label: 'My Orders',              icon: UsersIcon,  roles: ['consumer'] },
+  { to: '/dealer',          label: 'Dealer Home',             icon: HomeIcon,   roles: ['dealer'] },
+  { to: '/dealer/products', label: 'Browse Products',         icon: StoreIcon,  roles: ['dealer'] },
+  { to: '/dealer/bulk-buying', label: 'Bulk Buying',            icon: StoreIcon,  roles: ['dealer'] },
+  { to: '/dealer/cart',      label: 'Shopping Cart',           icon: StoreIcon,  roles: ['dealer'] },
+  { to: '/dealer/orders',    label: 'My Orders',               icon: UsersIcon,  roles: ['dealer'] },
 ]
 
 export default function AppLayout() {
   const { user, loginDemo, logout } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const { navigateBackWithLoader, navigateHomeWithLoader, navigateWithLoader, getStartingPage } = useNavigateWithLoader()
+  const { navigateBackWithLoader, navigateHome } = useNavigateWithLoader()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleLogout = () => {
@@ -54,47 +44,36 @@ export default function AppLayout() {
 
   const currentRole = user?.role || 'farmer'
   const visibleLinks = NAV_LINKS.filter(l => l.roles.includes(currentRole))
-  const homeLink = getStartingPage()
-
-  const isLinkActive = (to) => {
-    if (to.includes('?')) {
-      const [path, query] = to.split('?')
-      return location.pathname === path && location.search === `?${query}`
+  
+  const getHomeLink = (role) => {
+    const roleRoutes = {
+      farmer: '/farmer',
+      admin: '/admin/farmers',
+      verifier: '/admin/editor/field-1',
+      land_verifier: '/admin/editor/field-1',
+      surveyor: '/admin/editor/field-1',
+      consumer: '/marketplace',
+      dealer: '/dealer',
     }
-    if (location.search && location.search !== '') {
-      return false
-    }
-    return location.pathname === to
+    return roleRoutes[role] || '/farmer'
   }
+  
+  const homeLink = getHomeLink(currentRole)
 
-  const { handleGoBack } = useSmartGoBack()
-
-  const handleLogoClick = (e) => {
-    if (e) {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    setSidebarOpen(false)
-    navigateHomeWithLoader('Opening Dashboard...', 1200)
+  const handleGoBack = (e) => {
+    if (e && e.preventDefault) e.preventDefault()
+    navigateBackWithLoader(homeLink, 'Returning to previous screen...', 1200)
   }
 
   const handleRoleSwitch = (newRole) => {
-    // Strict authentication: Farmers CANNOT switch to Admin or Verifier
-    if (currentRole === 'farmer') {
-      return
-    }
-    // Verifiers CANNOT switch to Admin
-    if (currentRole === 'verifier' && newRole === 'admin') {
-      return
-    }
-
+    // Allow free role switching for demo purposes
     loginDemo(newRole)
     if (newRole === 'farmer') navigate('/farmer')
     else if (newRole === 'admin') navigate('/admin/farmers')
-    else if (newRole === 'verifier') navigate('/admin/editor/field-1')
-    else if (newRole === 'consumer') navigate('/consumer')
+    else if (newRole === 'verifier' || newRole === 'land_verifier' || newRole === 'surveyor') navigate('/admin/editor/field-1')
+    else if (newRole === 'consumer') navigate('/marketplace')
     else if (newRole === 'dealer') navigate('/dealer')
-    else navigate('/dashboard')
+    else navigate('/farmer')
   }
 
   return (
@@ -104,22 +83,12 @@ export default function AppLayout() {
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-v2v-nearblack dark:bg-slate-900 text-white flex flex-col border-r border-v2v-secondary/30 dark:border-slate-800 transform transition-transform duration-200
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:z-auto`}
       >
-        {/* Logo Header Container (Clickable -> Starting Page / Dashboard) */}
+        {/* Logo Header Container (Clickable -> Redirect to home page instantly) */}
         <div
-          role="link"
-          tabIndex={0}
-          aria-label="Go to home"
-          onClick={handleLogoClick}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              handleLogoClick(e)
-            }
-          }}
-          className="px-5 py-4 border-b border-v2v-secondary/30 dark:border-slate-800 flex items-center justify-between hover:opacity-90 transition-opacity cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-v2v-purple"
+          onClick={() => navigateHome()}
+          className="px-5 py-4 border-b border-v2v-secondary/30 dark:border-slate-800 flex items-center justify-between hover:opacity-90 transition-opacity cursor-pointer group"
         >
-          {/* stopPropagation prevents double-fire since parent div already handles click */}
-          <V2VLogo size="md" variant="light" onClick={(e) => { e.stopPropagation(); handleLogoClick(e) }} />
+          <V2VLogo size="md" variant="light" onClick={() => navigateHome()} />
           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-v2v-deep dark:bg-slate-800 text-v2v-lavender dark:text-purple-300 border border-v2v-lavender/30 dark:border-slate-700 uppercase group-hover:border-purple-400">
             DSP
           </span>
@@ -129,87 +98,61 @@ export default function AppLayout() {
         <div className="px-3 pt-3">
           <div className="bg-v2v-charcoal/80 dark:bg-slate-800/80 p-2.5 rounded-xl border border-v2v-secondary/40 dark:border-slate-700/60 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-200">
-              <span>🎨</span>
+              <span className="w-2 h-2 rounded-full bg-[#8A57C0]"></span>
               <span>Theme Mode</span>
             </div>
             <ThemeToggle variant="pill" />
           </div>
         </div>
 
-        {/* Role Control Panel */}
+        {/* Role Control Panel — Gated strictly to Development / Demo builds */}
         <div className="px-3 pt-2">
-          {currentRole === 'farmer' ? (
-            /* Authenticated Farmer View — No switching allowed */
+          {(!import.meta.env.DEV && import.meta.env.VITE_DEMO_ROLE_SWITCH !== 'true') ? (
+            /* Production View — Strictly authenticated session role, no switcher */
+            <div className="bg-v2v-charcoal dark:bg-slate-800/60 p-2.5 rounded-xl border border-v2v-secondary/40 dark:border-slate-700/50 text-xs">
+              <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                <span>AUTHENTICATED ROLE:</span>
+                <span className="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[9px] font-bold uppercase">
+                  {currentRole}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#B890F9] font-bold text-xs">
+                  {user?.full_name?.[0]?.toUpperCase() || 'U'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-white text-xs truncate">{user?.full_name || 'Active User'}</div>
+                  <div className="text-[10px] text-v2v-lavender dark:text-purple-300 font-medium capitalize">
+                    {currentRole} Access
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : currentRole === 'farmer' ? (
+            /* Farmer View */
             <div className="bg-v2v-charcoal dark:bg-slate-800/60 p-2.5 rounded-xl border border-v2v-secondary/40 dark:border-slate-700/50 text-xs">
               <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
                 <span>AUTHENTICATED ROLE:</span>
                 <span className="px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-[9px] font-bold">VERIFIED</span>
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-base">🧑‍🌾</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-xs">
+                  F
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-white text-xs truncate">{user?.full_name || 'Ganesh V.'}</div>
                   <div className="text-[10px] text-v2v-lavender dark:text-purple-300 font-medium">Farmer · Single Farm Access</div>
                 </div>
               </div>
               <div className="mt-2 text-[10px] text-gray-400 flex items-center gap-1 border-t border-white/10 pt-1.5">
-                <span>🔒</span>
                 <span className="text-gray-400">Restricted to your registered land</span>
               </div>
             </div>
-          ) : currentRole === 'verifier' ? (
-            /* Verifier Role Switcher — Operational & Land Specialist */
-            <div className="bg-v2v-charcoal dark:bg-slate-800/60 p-2 rounded-xl border border-v2v-secondary/40 dark:border-slate-700/50 text-xs">
-              <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
-                <span>ACTIVE ROLE:</span>
-                <span className="font-bold text-v2v-lavender dark:text-purple-300 uppercase">{currentRole}</span>
-              </div>
-              <select
-                value={currentRole}
-                onChange={(e) => handleRoleSwitch(e.target.value)}
-                className="w-full bg-v2v-nearblack dark:bg-slate-900 text-white border border-v2v-secondary/50 dark:border-slate-700 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-v2v-lavender cursor-pointer"
-              >
-                <option value="verifier">🛡️ Verifier (Full Spatial Controls)</option>
-                <option value="farmer">🧑‍🌾 Farmer View (Preview)</option>
-              </select>
-            </div>
-          ) : currentRole === 'consumer' ? (
-            /* Consumer Role Switcher */
-            <div className="bg-v2v-charcoal dark:bg-slate-800/60 p-2 rounded-xl border border-v2v-secondary/40 dark:border-slate-700/50 text-xs">
-              <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
-                <span>ACTIVE ROLE:</span>
-                <span className="font-bold text-v2v-lavender dark:text-purple-300 uppercase">{currentRole}</span>
-              </div>
-              <select
-                value={currentRole}
-                onChange={(e) => handleRoleSwitch(e.target.value)}
-                className="w-full bg-v2v-nearblack dark:bg-slate-900 text-white border border-v2v-secondary/50 dark:border-slate-700 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-v2v-lavender cursor-pointer"
-              >
-                <option value="consumer">🛒 Consumer Marketplace</option>
-                <option value="dealer">🏭 Dealer Marketplace</option>
-              </select>
-            </div>
-          ) : currentRole === 'dealer' ? (
-            /* Dealer Role Switcher */
-            <div className="bg-v2v-charcoal dark:bg-slate-800/60 p-2 rounded-xl border border-v2v-secondary/40 dark:border-slate-700/50 text-xs">
-              <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
-                <span>ACTIVE ROLE:</span>
-                <span className="font-bold text-v2v-lavender dark:text-purple-300 uppercase">{currentRole}</span>
-              </div>
-              <select
-                value={currentRole}
-                onChange={(e) => handleRoleSwitch(e.target.value)}
-                className="w-full bg-v2v-nearblack dark:bg-slate-900 text-white border border-v2v-secondary/50 dark:border-slate-700 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-v2v-lavender cursor-pointer"
-              >
-                <option value="dealer">🏭 Dealer Marketplace</option>
-                <option value="consumer">🛒 Consumer Marketplace</option>
-              </select>
-            </div>
           ) : (
-            /* Admin Role Switcher — Pure Administrative Command */
+            /* Demo / Dev Role Switcher */
             <div className="bg-v2v-charcoal dark:bg-slate-800/60 p-2 rounded-xl border border-v2v-secondary/40 dark:border-slate-700/50 text-xs">
               <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
-                <span>ACTIVE ROLE:</span>
+                <span>ACTIVE ROLE (DEMO):</span>
                 <span className="font-bold text-v2v-lavender dark:text-purple-300 uppercase">{currentRole}</span>
               </div>
               <select
@@ -217,11 +160,12 @@ export default function AppLayout() {
                 onChange={(e) => handleRoleSwitch(e.target.value)}
                 className="w-full bg-v2v-nearblack dark:bg-slate-900 text-white border border-v2v-secondary/50 dark:border-slate-700 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-v2v-lavender cursor-pointer"
               >
-                <option value="admin">⚙️ Admin (Farmers & Surveyors)</option>
-                <option value="verifier">🛡️ Land Verifier (Spatial Operations)</option>
-                <option value="farmer">🧑‍🌾 Farmer View</option>
-                <option value="consumer">🛒 Consumer Marketplace</option>
-                <option value="dealer">🏭 Dealer Marketplace</option>
+                <option value="admin">Admin (Full Control)</option>
+                <option value="verifier">Verifier (Land Verification)</option>
+                <option value="land_verifier">Land Verifier</option>
+                <option value="farmer">Farmer Portal</option>
+                <option value="consumer">Consumer</option>
+                <option value="dealer">Dealer</option>
               </select>
             </div>
           )}
@@ -230,28 +174,36 @@ export default function AppLayout() {
         {/* Nav Links */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           <div className="text-[10px] font-bold text-gray-400 dark:text-slate-400 px-3 uppercase tracking-wider mb-2">
-            {currentRole === 'admin' ? 'Administrative Controls' : currentRole === 'verifier' ? 'Verifier Spatial Console' : 'Platform Navigation'}
+            Platform Navigation
           </div>
-          {visibleLinks.map(({ to, label, icon: Icon }) => {
-            const active = isLinkActive(to)
+          {visibleLinks.map(({ to, label, icon: Icon, badge }) => {
+            let unread = 0
+            if (badge === 'requests') {
+              try {
+                unread = changeRequestStorage.getUnreadCount(currentRole, user)
+              } catch (e) {}
+            }
+
             return (
-              <Link
+              <NavLink
                 key={to}
                 to={to}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all
-                  ${active
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all
+                  ${isActive
                     ? 'bg-v2v-gradient dark:bg-gradient-to-r dark:from-purple-700 dark:to-indigo-600 text-white shadow-md shadow-v2v-lavender/25'
-                    : 'text-gray-300 dark:text-slate-300 hover:bg-v2v-electric/50 dark:hover:bg-slate-800 hover:text-white'}`}
+                    : 'text-gray-300 dark:text-slate-300 hover:bg-v2v-electric/50 dark:hover:bg-slate-800 hover:text-white'}`
+                }
               >
                 <Icon className="w-4 h-4 flex-shrink-0 text-v2v-lavender dark:text-purple-400" />
-                <span>{label}</span>
-                {to.includes('tab=requests') && (
-                  <span className="ml-auto bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
-                    NEW
+                <span className="truncate">{label}</span>
+                {unread > 0 && (
+                  <span className="ml-auto px-1.5 py-0.2 rounded-full bg-amber-500 text-black text-[10px] font-extrabold font-mono shadow-sm">
+                    {unread}
                   </span>
                 )}
-              </Link>
+              </NavLink>
             )
           })}
         </nav>
@@ -300,25 +252,22 @@ export default function AppLayout() {
             >
               <MenuIcon className="w-5 h-5" />
             </button>
-            <div className="lg:hidden">
-              <V2VLogo size="sm" onClick={handleLogoClick} />
+            <div onClick={() => navigateHome()} className="lg:hidden cursor-pointer">
+              <V2VLogo size="sm" onClick={() => navigateHome()} />
             </div>
-            <button
-              type="button"
-              onClick={handleLogoClick}
-              className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-v2v-purple dark:hover:text-purple-300 transition-colors focus:outline-none"
-              aria-label="Go to home"
+            <div
+              onClick={() => navigateHome()}
+              className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-v2v-purple dark:hover:text-purple-300 transition-colors cursor-pointer"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>AgriMap DSP Platform</span>
-            </button>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={handleGoBack}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-v2v-purple hover:text-white dark:hover:bg-purple-900/60 dark:hover:text-purple-200 border border-slate-200 dark:border-slate-700 transition-all shadow-sm cursor-pointer"
               title="Go to previous page"
-              aria-label="Go Back"
             >
               <span className="text-sm font-black">←</span>
               <span>Go Back</span>
@@ -403,18 +352,10 @@ function StoreIcon({ className }) {
   )
 }
 
-function RequestsIcon({ className }) {
+function InboxIcon({ className }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-    </svg>
-  )
-}
-
-function SurveyorIcon({ className }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
     </svg>
   )
 }
@@ -426,4 +367,5 @@ function ChartIcon({ className }) {
     </svg>
   )
 }
+
 

@@ -17,6 +17,7 @@ from app.api.v1.devices import router as devices_router
 from app.api.v1.webhooks import router as webhooks_router
 from app.api.v1.websocket import router as websocket_router
 from app.api.v1.integration import router as integration_router
+from app.api.v1.requests import router as requests_router
 from app.api.v1.demand import router as demand_router
 
 v1_router = APIRouter()
@@ -41,6 +42,8 @@ v1_router.include_router(devices_router)
 v1_router.include_router(webhooks_router)
 v1_router.include_router(websocket_router)
 v1_router.include_router(integration_router)
+v1_router.include_router(requests_router)
 
 # --- Demand Insights API (Admin Only) ---
 v1_router.include_router(demand_router, prefix="/demand", tags=["demand"])
+

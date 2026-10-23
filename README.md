@@ -260,10 +260,115 @@ Please refer to the master document:
 
 ---
 
+## 🚀 Setup, Configuration & Teammate Handoff
+
+### 1. Environment Configuration (.env)
+AgriMap DSP uses the Google Maps JavaScript API for satellite cadastral twin mapping and custom SVG markers.
+
+Copy the example environment file:
+```bash
+# In the frontend directory:
+cp frontend/.env.example frontend/.env.local
+```
+
+Add your Google Maps API Key and Map ID in `frontend/.env.local`:
+```env
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+VITE_GOOGLE_MAP_ID=your_map_id_here
+```
+
+### 2. Running Locally & Building
+```bash
+# Install frontend dependencies
+cd frontend
+npm install
+
+# Run Vite development server
+npm run dev
+# App will launch on http://localhost:5173
+
+# Production build & verification
+npm run build
+```
+
+### 3. Project Directory Structure
+```
+FXT/DSP--1/
+├── frontend/
+│   ├── public/
+│   │   └── images/
+│   │       ├── products/              # Dedicated individual product images
+│   │       │   ├── banana-cavendish.jpg
+│   │       │   ├── cabbage.jpg
+│   │       │   ├── carrot.jpg
+│   │       │   ├── cauliflower.jpg
+│   │       │   ├── durum_wheat.jpg
+│   │       │   ├── groundnut_oil.jpg
+│   │       │   ├── mango-alphonso.jpg
+│   │       │   ├── onion-red.jpg
+│   │       │   ├── potato-russet.jpg
+│   │       │   ├── red_bell_peppers.jpg
+│   │       │   ├── sona_masoori_rice.jpg
+│   │       │   ├── tomato-processing.jpg
+│   │       │   ├── tomato-roma.jpg
+│   │       │   └── yellow_soybeans.jpg
+│   │       └── v2v-logo.png
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   │   ├── DiagnosticsModal.jsx   # Accessible Power, CCTV, Sensor & Borewell modal
+│   │   │   │   ├── Icon.jsx               # Unified Lucide icon component & emoji mapping
+│   │   │   │   └── PortalNavbar.jsx       # Unified portal navbar with logout
+│   │   │   ├── maps/
+│   │   │   │   └── GoogleLandMap.jsx      # Google Maps JavaScript API with dark style & SVG markers
+│   │   │   └── survey/
+│   │   │       └── ScratchMapDigitizerModal.jsx
+│   │   ├── lib/
+│   │   │   ├── consumerData.js            # Consumer & dealer products catalogue
+│   │   │   ├── farmStorage.js             # Data access layer (saved farmers data untouched)
+│   │   │   ├── geoUtils.js                # Geodesic math & spatial helpers
+│   │   │   └── imageManifest.js           # Central product image manifest
+│   │   └── pages/
+│   │       ├── FarmerDashboardPage.jsx    # Farmer dashboard with Google Maps & Diagnostics
+│   │       ├── MarketplacePage.jsx        # Verified farmers marketplace
+│   │       └── MapViewPage.jsx            # Single field satellite inspector
+│   ├── .env.example
+│   └── package.json
+├── IMAGE_CREDITS.md                       # Image generation prompts & licensing credits
+├── .env.example                           # Root environment placeholder
+├── .gitignore                             # Secret & artifact exclusion rules
+└── README.md
+```
+
+### 4. Summary of Recent Updates
+- **Power Feeder & Asset Diagnostics**: Standardized `DiagnosticsModal.jsx` supporting Borewell, CCTV (with real canvas snapshot generation & night vision toggle), Sensor telemetry thresholds, and 3-Phase + 12kW Solar Power station.
+- **Product Images**: Every single product has its own individual high-resolution image stored in `frontend/public/images/products/` with object-fit cover and lazy loading.
+- **Professional Vector Icons**: Replaced all emojis across navigation, titles, buttons, status badges, and empty states with Lucide vector icons (`<Icon />`).
+- **Google Maps JavaScript API Migration**: Implemented `GoogleLandMap.jsx` utilizing Google Maps JS API with dark theme `#0B0F14` / `#111823` map style and custom SVG markers with interactive info windows. Saved farmer data schema and coordinates were strictly preserved without mutation.
+- **WCAG AA Dark Theme**: Design tokens and contrast rules applied across all inputs, cards, headers, modals, and tables with full text visibility.
+
+---
+
 ## 📄 License & Credits
 
 - **Organization**: V2V Tech — Vision To Value Technologies
 - **Platform**: V2V Agrilythos (AGX) Smart Agriculture Initiative
 - **Project Lead / Mentorship**: Bavanies
 - **Development**: AgriMap DSP Engineering Team (Ravi, Kishore, Ram Prasath)
+
+---
+
+## 🔐 Verified Direct Login Credentials Directory (All Roles)
+
+Use these verified credentials directly on the **Sign In** page (`http://localhost:5173/login`) or after launching the APK. All accounts work seamlessly with guaranteed instant access across online and standalone preview modes:
+
+| Role | Email Address | Password | Landing Portal | Role Capabilities & Core Features |
+|---|---|---|---|---|
+| 🚜 **Farmer** | `farmer.ganesh@v2vtech.com`<br>*(alt: `farmer@v2vtech.com`)* | `farmer123` | `/farmer` | • Interactive Google Maps Farmland Locator<br>• Tubewell pump telemetry & IoT sensors<br>• Sub-field crop distribution analysis<br>• Harvest produce listing & boundary change requests |
+| 🛍️ **Consumer** | `consumer@farmxt.com`<br>*(alt: `consumer@v2vtech.com`)* | `consumer123` | `/marketplace` | • Fresh verified produce marketplace<br>• Product detail pages & high-res images<br>• Shopping cart, delivery address & instant checkout<br>• Order history tracking |
+| 🏬 **Dealer** | `dealer@farmxt.com`<br>*(alt: `dealer@v2vtech.com`)* | `dealer123` | `/dealer` | • B2B bulk procurement & wholesale order desk<br>• Bulk crop buying volume calculators<br>• Farm equipment & fertilizer inventory catalog<br>• Dealer procurement cart & order management |
+| 🛡️ **System Admin** | `admin@v2vtech.com`<br>*(alt: `admin@agrimap.local`)* | `admin123` | `/admin/farmers` | • Full farmer verification & land approval console<br>• District demand insights & price analytics<br>• Boundary change request approval / rejection<br>• Surveyor management & user access audits |
+| 📐 **Field Surveyor** | `surveyor@v2vtech.com`<br>*(alt: `surveyor@agrimap.local`)* | `surveyor123` | `/admin/editor/field-1` | • 'Start from scratch' boundary digitization studio<br>• Precision GPS coordinate surveyor tools<br>• Field boundary vertex editing & area calculation<br>• Geotagged observation points & camera audits |
+
+> **Self-Registration Note**: You can also navigate to **Create an account** (`/register`) to register your own custom email and password as a **Farmer**, **Consumer**, or **Dealer**. All registered accounts are instantly activated and can directly log in on `/login`.
 

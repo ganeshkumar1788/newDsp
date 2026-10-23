@@ -12,7 +12,11 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.spatial import geojson_to_spatial
+from app.core.access import (
+    ensure_can_mutate, ensure_admin, ensure_field_access, farmer_scope_id
+)
 from app.models.device import Device
+from app.models.field import Field
 from app.models.sensor_data import SensorData
 from app.models.user import User
 from app.schemas.device import DeviceCreate, DeviceUpdate, DeviceRead
@@ -31,7 +35,8 @@ def register_device(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Register a new field device (GPS receiver, sensor, camera, drone)."""
+    """Register a new field device (GPS receiver, sensor, camera, drone). Requires surveyor or admin role."""
+    ensure_can_mutate(current_user)
     device = Device(
         **payload.model_dump(),
         registered_by_id=current_user.id,
@@ -54,12 +59,17 @@ def list_devices(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List registered devices with optional filters. Paginated."""
+    """List registered devices with optional filters. Farmers only receive devices on their assigned fields."""
     query = db.query(Device)
+    if current_user.role == "farmer":
+        fid = farmer_scope_id(db, current_user)
+        farmer_field_ids = [f.id for f in db.query(Field.id).filter(Field.farmer_id == fid).all()]
+        query = query.filter(Device.field_id.in_(farmer_field_ids))
+    elif field_id:
+        query = query.filter(Device.field_id == field_id)
+
     if device_type:
         query = query.filter(Device.device_type == device_type)
-    if field_id:
-        query = query.filter(Device.field_id == field_id)
     if status_filter:
         query = query.filter(Device.status == status_filter)
 
@@ -84,6 +94,10 @@ def get_device(
     device = db.get(Device, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
+    if current_user.role == "farmer" and device.field_id:
+        field = db.get(Field, device.field_id)
+        if field:
+            ensure_field_access(db, current_user, field)
     return device
 
 
@@ -94,7 +108,8 @@ def update_device(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update device information."""
+    """Update device information. Requires surveyor or admin role."""
+    ensure_can_mutate(current_user)
     device = db.get(Device, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -115,15 +130,16 @@ def delete_device(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a device and all its sensor readings."""
+    """Delete a device. Requires admin role."""
+    ensure_admin(current_user)
     device = db.get(Device, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
 
     db.delete(device)
     db.commit()
-    
     logger.info("Device deleted: %s by %s", device_id, current_user.email)
+    return
 
 
 # --- Sensor Data ---

@@ -30,11 +30,14 @@ export default function ProtectedRoute({ allowedRoles }) {
     if (user.role === 'farmer') {
       return <Navigate to="/farmer" replace />
     }
-    if (user.role === 'verifier') {
+    if (user.role === 'admin') {
       return <Navigate to="/admin/farmers" replace />
     }
+    if (user.role === 'verifier' || user.role === 'land_verifier' || user.role === 'surveyor') {
+      return <Navigate to="/admin/editor/field-1" replace />
+    }
     if (user.role === 'consumer') {
-      return <Navigate to="/consumer" replace />
+      return <Navigate to="/marketplace" replace />
     }
     if (user.role === 'dealer') {
       return <Navigate to="/dealer" replace />

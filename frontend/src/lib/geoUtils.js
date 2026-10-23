@@ -27,6 +27,24 @@ export function getDistanceMeters(p1, p2) {
 }
 
 /**
+ * Calculates initial compass bearing in degrees (0-360) from p1 to p2.
+ * @param {Array<number>} p1 - [lat, lng] start point
+ * @param {Array<number>} p2 - [lat, lng] destination point
+ * @returns {number} Compass bearing in degrees (0 to 360)
+ */
+export function calculateBearing(p1, p2) {
+  if (!p1 || !p2) return 0
+  const lat1 = (p1[0] * Math.PI) / 180
+  const lat2 = (p2[0] * Math.PI) / 180
+  const deltaLng = ((p2[1] - p1[1]) * Math.PI) / 180
+
+  const y = Math.sin(deltaLng) * Math.cos(lat2)
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng)
+  let brng = (Math.atan2(y, x) * 180) / Math.PI
+  return (brng + 360) % 360
+}
+
+/**
  * Calculates total path length for an array of [lat, lng] points.
  */
 export function calculatePathLength(points) {
@@ -101,6 +119,47 @@ export function calculatePolygonArea(points) {
 }
 
 /**
+ * Calculates centroid [lat, lng] of a polygon defined by [lat, lng] vertices.
+ */
+export function calculatePolygonCentroid(points) {
+  if (!points || points.length === 0) return [10.6585, 77.0125]
+  let clean = [...points]
+  if (
+    clean.length > 3 &&
+    clean[0][0] === clean[clean.length - 1][0] &&
+    clean[0][1] === clean[clean.length - 1][1]
+  ) {
+    clean.pop()
+  }
+  if (clean.length === 0) return [10.6585, 77.0125]
+  if (clean.length === 1) return clean[0]
+  if (clean.length === 2) return [(clean[0][0] + clean[1][0]) / 2, (clean[0][1] + clean[1][1]) / 2]
+
+  let area = 0
+  let cx = 0
+  let cy = 0
+  for (let i = 0; i < clean.length; i++) {
+    const j = (i + 1) % clean.length
+    const [lat1, lng1] = clean[i]
+    const [lat2, lng2] = clean[j]
+    const factor = lat1 * lng2 - lat2 * lng1
+    area += factor
+    cx += (lat1 + lat2) * factor
+    cy += (lng1 + lng2) * factor
+  }
+  area = area / 2
+  if (Math.abs(area) < 1e-9) {
+    // Fallback to simple average
+    const avgLat = clean.reduce((sum, p) => sum + p[0], 0) / clean.length
+    const avgLng = clean.reduce((sum, p) => sum + p[1], 0) / clean.length
+    return [avgLat, avgLng]
+  }
+  cx = cx / (6 * area)
+  cy = cy / (6 * area)
+  return [Number(cx.toFixed(6)), Number(cy.toFixed(6))]
+}
+
+/**
  * Validates whether an entity is a valid [lat, lng] array with finite numbers.
  */
 export function isValidLatLng(pt) {
@@ -114,6 +173,30 @@ export function isValidLatLng(pt) {
     !isNaN(pt[1]) &&
     isFinite(pt[1])
   )
+}
+
+/**
+ * Ray-casting algorithm to determine if a point [lat, lng] is inside a polygon.
+ * @param {Array<number>|Object} point - [lat, lng] or {lat, lng}
+ * @param {Array<Array<number>>|Array<Object>} polygon - Array of [lat, lng] or {lat, lng}
+ * @returns {boolean}
+ */
+export function isPointInPolygon(point, polygon) {
+  if (!point || !polygon || polygon.length < 3) return false
+  const ptLat = Array.isArray(point) ? point[0] : point.lat
+  const ptLng = Array.isArray(point) ? point[1] : point.lng
+
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = Array.isArray(polygon[i]) ? polygon[i][1] : polygon[i].lng
+    const yi = Array.isArray(polygon[i]) ? polygon[i][0] : polygon[i].lat
+    const xj = Array.isArray(polygon[j]) ? polygon[j][1] : polygon[j].lng
+    const yj = Array.isArray(polygon[j]) ? polygon[j][0] : polygon[j].lat
+
+    const intersect = yi > ptLat !== yj > ptLat && ptLng < ((xj - xi) * (ptLat - yi)) / (yj - yi) + xi
+    if (intersect) inside = !inside
+  }
+  return inside
 }
 
 /**

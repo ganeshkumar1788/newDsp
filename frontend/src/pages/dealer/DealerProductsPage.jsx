@@ -1,212 +1,171 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { PRODUCE_CATEGORIES, DEMO_PRODUCTS, GRADE_CLASSIFICATIONS, RIPENESS_STAGES, addToCart, getCart, getAllProducts } from '../../lib/consumerData.js'
-import { getPricingRecommendation } from '../../lib/aiPricingEngine.js'
-import { useSmartGoBack } from '../../lib/navigationHistory.js'
+import React, { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { PRODUCE_CATEGORIES, GRADE_CLASSIFICATIONS, RIPENESS_STAGES, DEMO_PRODUCTS } from '../../lib/consumerData.js'
+import { getCart, addToCart } from '../../lib/consumerData.js'
+
+import PortalNavbar from '../../components/common/PortalNavbar.jsx'
+import Icon from '../../components/common/Icon.jsx'
 
 export default function DealerProductsPage() {
-  const { handleGoBack } = useSmartGoBack()
-  const [searchParams] = useSearchParams()
-  const categoryParam = searchParams.get('category')
-  
-  const [products, setProducts] = useState(getAllProducts())
-  const [filteredProducts, setFilteredProducts] = useState(getAllProducts())
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState(categoryParam || 'all')
-  const [selectedGrade, setSelectedGrade] = useState('all')
-  const [selectedRipeness, setSelectedRipeness] = useState('all')
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 500 })
-  const [cart, setCart] = useState([])
+  const searchParams = new URLSearchParams(window.location.search)
+  const initialCategory = searchParams.get('category') || ''
 
-  useEffect(() => {
-    setCart(getCart())
-  }, [])
+  const [filters, setFilters] = useState({
+    category: initialCategory,
+    grade: '',
+    ripeness: '',
+    minPrice: '',
+    maxPrice: '',
+    search: '',
+  })
 
-  useEffect(() => {
-    let filtered = products
-
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.category === selectedCategory)
-    }
-
-    if (selectedGrade !== 'all') {
-      filtered = filtered.filter(p => p.grade === selectedGrade)
-    }
-
-    if (selectedRipeness !== 'all') {
-      filtered = filtered.filter(p => p.ripeness === selectedRipeness)
-    }
-
-    filtered = filtered.filter(p => p.pricePerKg >= priceRange.min && p.pricePerKg <= priceRange.max)
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(term) ||
-        p.variety.toLowerCase().includes(term) ||
-        p.location.toLowerCase().includes(term) ||
-        p.farmerName.toLowerCase().includes(term)
-      )
-    }
-
-    setFilteredProducts(filtered)
-  }, [selectedCategory, selectedGrade, selectedRipeness, priceRange, searchTerm, products])
+  const filteredProducts = useMemo(() => {
+    return DEMO_PRODUCTS.filter(product => {
+      if (filters.category && product.category !== filters.category) return false
+      if (filters.grade && product.grade !== filters.grade) return false
+      if (filters.ripeness && product.ripeness !== filters.ripeness) return false
+      if (filters.minPrice && product.pricePerKg < Number(filters.minPrice)) return false
+      if (filters.maxPrice && product.pricePerKg > Number(filters.maxPrice)) return false
+      if (filters.search && !product.name.toLowerCase().includes(filters.search.toLowerCase())) return false
+      return true
+    })
+  }, [filters])
 
   const handleAddToCart = (product) => {
-    const updatedCart = addToCart(product, 10) // Default 10kg for dealers
-    setCart(updatedCart)
-    alert(`${product.name} (10kg) added to cart!`)
+    addToCart(product, 10) // Default 10kg for dealers
+    alert(`${product.name} added to cart!`)
   }
 
-  const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0)
-
   return (
-    <div className="min-h-screen bg-gradient-to-br bg-v2v-softwhite">
-      <div className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleGoBack}
-              className="text-v2v-deep dark:text-purple-400 hover:text-v2v-lavender dark:hover:text-purple-300 font-bold flex items-center gap-1 cursor-pointer"
-            >
-              ← Back to Home
-            </button>
-            <div className="flex items-center gap-4">
-              <span className="text-slate-600 dark:text-slate-400">DEALER MARKETPLACE</span>
-              {cartItemsCount > 0 && (
-                <Link
-                  to="/dealer/cart"
-                  className="bg-v2v-gradient text-white px-4 py-2 rounded-lg font-bold hover:opacity-90 transition-colors"
-                >
-                  🛒 Cart ({cartItemsCount})
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <PortalNavbar portal="dealer" />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Browse Products (Wholesale)</h1>
-          <p className="text-slate-600 dark:text-slate-400">All data is simulated for demonstration purposes</p>
-        </div>
-
         <div className="flex flex-col lg:flex-row gap-8">
+          {/* Filters Sidebar */}
           <div className="lg:w-64 flex-shrink-0">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 sticky top-4">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Filters</h2>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Search</label>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search products..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Category</label>
+            <div className="bg-white rounded-xl shadow p-6 sticky top-4">
+              <h2 className="font-bold text-gray-800 mb-4">Filters</h2>
+              
+              {/* Category Filter */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
+                  value={filters.category}
+                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
                 >
-                  <option value="all">All Categories</option>
-                  {Object.entries(PRODUCE_CATEGORIES).map(([key, category]) => (
-                    <option key={key} value={key}>{category.icon} {category.name}</option>
+                  <option value="">All Categories</option>
+                  {Object.entries(PRODUCE_CATEGORIES).map(([key, cat]) => (
+                    <option key={key} value={key}>{cat.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Grade</label>
+              {/* Grade Filter */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Grade</label>
                 <select
-                  value={selectedGrade}
-                  onChange={(e) => setSelectedGrade(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
+                  value={filters.grade}
+                  onChange={(e) => setFilters({ ...filters, grade: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
                 >
-                  <option value="all">All Grades</option>
-                  {Object.entries(GRADE_CLASSIFICATIONS).map(([key, grade]) => (
-                    <option key={key} value={key}>{grade.icon} {grade.name}</option>
+                  <option value="">All Grades</option>
+                  {Object.values(GRADE_CLASSIFICATIONS).map(grade => (
+                    <option key={grade.id} value={grade.id}>{grade.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Ripeness</label>
+              {/* Ripeness Filter */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ripeness</label>
                 <select
-                  value={selectedRipeness}
-                  onChange={(e) => setSelectedRipeness(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
+                  value={filters.ripeness}
+                  onChange={(e) => setFilters({ ...filters, ripeness: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
                 >
-                  <option value="all">All Ripeness</option>
-                  {Object.entries(RIPENESS_STAGES).map(([key, ripeness]) => (
-                    <option key={key} value={key}>{ripeness.icon} {ripeness.name}</option>
+                  <option value="">All Ripeness</option>
+                  {Object.values(RIPENESS_STAGES).map(ripeness => (
+                    <option key={ripeness.id} value={ripeness.id}>{ripeness.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-300 mb-2">Price Range (₹/kg)</label>
+              {/* Price Range */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Price Range (₹/kg)</label>
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    value={priceRange.min}
-                    onChange={(e) => setPriceRange({ ...priceRange, min: parseInt(e.target.value) || 0 })}
                     placeholder="Min"
-                    className="w-1/2 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
+                    value={filters.minPrice}
+                    onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
+                    className="w-1/2 border rounded-lg px-3 py-2"
                   />
                   <input
                     type="number"
-                    value={priceRange.max}
-                    onChange={(e) => setPriceRange({ ...priceRange, max: parseInt(e.target.value) || 500 })}
                     placeholder="Max"
-                    className="w-1/2 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-v2v-lavender dark:focus:ring-purple-400 focus:border-transparent"
+                    value={filters.maxPrice}
+                    onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
+                    className="w-1/2 border rounded-lg px-3 py-2"
                   />
                 </div>
               </div>
 
+              {/* Search */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+
               <button
-                onClick={() => {
-                  setSearchTerm('')
-                  setSelectedCategory('all')
-                  setSelectedGrade('all')
-                  setSelectedRipeness('all')
-                  setPriceRange({ min: 0, max: 500 })
-                }}
-                className="w-full py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-300 transition-colors"
+                onClick={() => setFilters({ category: '', grade: '', ripeness: '', minPrice: '', maxPrice: '', search: '' })}
+                className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Clear Filters
               </button>
             </div>
           </div>
 
+          {/* Products Grid */}
           <div className="flex-1">
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-slate-600 dark:text-slate-400">{filteredProducts.length} products found</p>
-              <Link to="/dealer/bulk-buying" className="bg-v2v-lavender text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-                🏭 Try Bulk Buying
+              <p className="text-gray-600">{filteredProducts.length} products found</p>
+              <Link to="/dealer/bulk-buying" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 font-bold text-xs">
+                <Icon name="store" size={16} />
+                Try Bulk Buying
               </Link>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map(product => (
-                <div key={product.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg transition-all border border-slate-100 overflow-hidden">
-                  <div className="h-48 bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center text-6xl">
-                    {PRODUCE_CATEGORIES[product.category]?.icon || '🥬'}
+                <div key={product.id} className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all border border-gray-100 overflow-hidden">
+                  <div className="h-48 bg-gray-100 overflow-hidden relative group">
+                    <img
+                      src={product.imageUrl || '/images/products/durum_wheat.jpg'}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/images/products/durum_wheat.jpg';
+                      }}
+                    />
                   </div>
                   <div className="p-4">
                     <Link to={`/dealer/product/${product.id}`}>
-                      <h3 className="font-bold text-slate-900 dark:text-slate-100 hover:text-v2v-deep dark:text-purple-400">{product.name}</h3>
+                      <h3 className="font-bold text-gray-800 hover:text-blue-600">{product.name}</h3>
                     </Link>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{product.variety} • {product.location}</p>
+                    <p className="text-sm text-gray-500">{product.variety} • {product.location}</p>
                     
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="px-2 py-1 bg-blue-100 text-v2v-deep dark:text-purple-400 text-xs rounded">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
                         {GRADE_CLASSIFICATIONS[product.grade]?.name}
                       </span>
                       <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
@@ -215,20 +174,20 @@ export default function DealerProductsPage() {
                     </div>
 
                     <div className="flex items-center justify-between mt-3">
-                      <span className="text-2xl font-bold text-v2v-deep dark:text-purple-400">₹{product.pricePerKg}/kg</span>
-                      <span className="text-sm text-slate-500 dark:text-slate-400">{product.availableQuantity} kg</span>
+                      <span className="text-2xl font-bold text-blue-600">₹{product.pricePerKg}/kg</span>
+                      <span className="text-sm text-gray-500">{product.availableQuantity} kg</span>
                     </div>
 
                     <div className="flex gap-2 mt-4">
                       <button
                         onClick={() => handleAddToCart(product)}
-                        className="flex-1 bg-v2v-gradient text-white py-2 rounded-lg hover:opacity-90 transition-colors"
+                        className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         Add 10kg
                       </button>
                       <Link
                         to={`/dealer/product/${product.id}`}
-                        className="flex-1 border border-v2v-lavender text-v2v-deep dark:text-purple-400 py-2 rounded-lg hover:bg-purple-50 dark:bg-purple-950/30 transition-colors text-center"
+                        className="flex-1 border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 transition-colors text-center"
                       >
                         Details
                       </Link>
@@ -240,16 +199,10 @@ export default function DealerProductsPage() {
 
             {filteredProducts.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-slate-500 dark:text-slate-400 text-lg">No products found matching your filters.</p>
+                <p className="text-gray-500 text-lg">No products found matching your filters.</p>
                 <button
-                  onClick={() => {
-                    setSearchTerm('')
-                    setSelectedCategory('all')
-                    setSelectedGrade('all')
-                    setSelectedRipeness('all')
-                    setPriceRange({ min: 0, max: 500 })
-                  }}
-                  className="mt-4 text-v2v-deep dark:text-purple-400 hover:text-v2v-deep dark:text-purple-400 underline"
+                  onClick={() => setFilters({ category: '', grade: '', ripeness: '', minPrice: '', maxPrice: '', search: '' })}
+                  className="mt-4 text-blue-600 hover:text-blue-700 underline"
                 >
                   Clear all filters
                 </button>

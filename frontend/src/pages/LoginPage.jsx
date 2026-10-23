@@ -1,905 +1,230 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import ThemeToggle from '../components/common/ThemeToggle'
-import farmStorage from '../lib/farmStorage'
-import { getNavTrail, saveNavTrail, recordNavRoute } from '../lib/navigationHistory'
-
-// Pre-defined Seeds & Crops list for Farmer Registration multi-select
-const SEED_CROP_OPTIONS = [
-  { id: 'rice', label: 'Basmati Rice (Paddy)', icon: '🌾' },
-  { id: 'wheat', label: 'Wheat (Golden Grain)', icon: '🌾' },
-  { id: 'cotton', label: 'Bt Cotton', icon: '🌿' },
-  { id: 'sugarcane', label: 'Sugarcane', icon: '🍬' },
-  { id: 'maize', label: 'Maize / Sweet Corn', icon: '🌽' },
-  { id: 'groundnut', label: 'Groundnut / Peanut', icon: '🥜' },
-  { id: 'vegetables', label: 'Tomatoes & Vegetables', icon: '🍅' },
-  { id: 'mango', label: 'Mangoes & Orchards', icon: '🥭' },
-  { id: 'chilli', label: 'Red Chillies & Spices', icon: '🌶️' },
-  { id: 'soybean', label: 'Soybeans & Mustard', icon: '🌻' },
-  { id: 'banana', label: 'Banana Plantation', icon: '🍌' },
-  { id: 'potato', label: 'Potatoes & Tubers', icon: '🥔' },
-]
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { BrandHeader } from '../auth/components/BrandHeader';
+import { authConfig } from '../auth/authConfig';
+import '../auth/styles/auth.css';
 
 export default function LoginPage() {
-  const { login, loginDemo, user } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const from = location.state?.from?.pathname
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, login } = useAuth();
 
-  // Gateway Mode: 'login' or 'register'
-  const [mode, setMode] = useState('login')
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // Selected Persona Role: 'farmer' | 'consumer' | 'dealer' | 'admin'
-  const [selectedRole, setSelectedRole] = useState('farmer')
+  // Success message passed from registration
+  const registrationSuccessMsg = location.state?.message;
 
-  // Login Form
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  // Farmer Registration Form
-  const [farmerReg, setFarmerReg] = useState({
-    full_name: '',
-    age: '',
-    area_region: '',
-    contact_number: '',
-    land_address: '',
-    area_sq_acres: '',
-    crops_yield: ['Basmati Rice (Paddy)', 'Bt Cotton'],
-  })
-
-  // Consumer Registration Form
-  const [consumerReg, setConsumerReg] = useState({
-    full_name: '',
-    email: '',
-    contact_number: '',
-    area_place: '',
-    city_address: '',
-    produce_preference: 'Organic Fruits & Vegetables',
-    password: '',
-  })
-
-  // Dealer Registration Form
-  const [dealerReg, setDealerReg] = useState({
-    business_name: '',
-    contact_person: '',
-    email: '',
-    contact_number: '',
-    area_place: '',
-    gstin_license: '',
-    region_territory: 'Gujarat & Western India',
-    password: '',
-  })
-
-  // Admin Registration Form
-  const [adminReg, setAdminReg] = useState({
-    full_name: '',
-    email: '',
-    master_key: '',
-    password: '',
-  })
-
-  // Registration Submitted Modal state
-  const [submittedModal, setSubmittedModal] = useState(null)
-
-  // Redirect if already logged in
+  // Auto-redirect if already authenticated
   useEffect(() => {
     if (user) {
-      if (from) {
-        navigate(from, { replace: true })
-      } else if (user.role === 'farmer') {
-        navigate('/farmer', { replace: true })
-      } else if (user.role === 'admin' || user.role === 'verifier') {
-        navigate('/admin/farmers', { replace: true })
-      } else if (user.role === 'consumer') {
-        navigate('/consumer', { replace: true })
-      } else if (user.role === 'dealer') {
-        navigate('/dealer', { replace: true })
-      } else {
-        navigate('/dashboard', { replace: true })
-      }
+      const fromPath = location.state?.from?.pathname;
+      const target = fromPath || authConfig.redirects.redirectAfterLogin(user);
+      navigate(target, { replace: true });
     }
-  }, [user, from, navigate])
+  }, [user, location.state, navigate]);
 
-  // Pre-fill demo credentials on role tab switch in Login Mode
-  useEffect(() => {
-    if (mode === 'login') {
-      if (selectedRole === 'farmer') {
-        setLoginForm({ email: 'farmer@v2vtech.com', password: 'farmer123' })
-      } else if (selectedRole === 'admin') {
-        setLoginForm({ email: 'admin@farmxt.com', password: 'admin123' })
-      } else if (selectedRole === 'consumer') {
-        setLoginForm({ email: 'consumer@farmxt.com', password: 'consumer123' })
-      } else if (selectedRole === 'dealer') {
-        setLoginForm({ email: 'dealer@farmxt.com', password: 'dealer123' })
-      }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (loading) return;
+
+    setErrorMsg('');
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail || !password) {
+      setErrorMsg('Please enter both your email address and password.');
+      return;
     }
-  }, [mode, selectedRole])
 
-  // Handle Login Submission
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccessMsg('')
-    setLoading(true)
-
+    setLoading(true);
     try {
-      // Check stored custom credentials first
-      const matchedCred = farmStorage.authenticateUser(loginForm.email, loginForm.password, selectedRole)
-
-      if (matchedCred) {
-        loginDemo(matchedCred.role, {
-          email: matchedCred.email,
-          full_name: matchedCred.full_name,
-          farmer_id: matchedCred.farmer_id || 'farmer-1',
-          field_id: matchedCred.field_id || 'field-1',
-        })
-        if (matchedCred.role === 'farmer') {
-          navigate('/farmer', { replace: true })
-        } else if (matchedCred.role === 'admin') {
-          navigate('/admin/farmers', { replace: true })
-        } else if (matchedCred.role === 'consumer') {
-          navigate('/consumer', { replace: true })
-        } else if (matchedCred.role === 'dealer') {
-          navigate('/dealer', { replace: true })
-        } else {
-          navigate('/dashboard', { replace: true })
-        }
-        return
-      }
-
-      // Check if email belongs to a pending farmer registration
-      const pendingList = farmStorage.getPendingFarmerRegistrations()
-      const pendingFarmer = pendingList.find(p => p.contact_number.includes(loginForm.email) || p.full_name.toLowerCase().includes(loginForm.email.toLowerCase()))
-
-      if (pendingFarmer) {
-        setError(`⚠️ Registration Pending Admin Approval: Farmer "${pendingFarmer.full_name}" is currently awaiting Admin verification & credential creation. Farmer credentials are set ONLY by an Admin.`)
-        setLoading(false)
-        return
-      }
-
-      if (selectedRole === 'farmer') {
-        setError('🛑 Access Restricted: Farmer credentials can ONLY be set & issued by an Admin. Please submit a registration request for Admin review or log in using your Admin-assigned credentials.')
-        setLoading(false)
-        return
-      }
-
-      // Fallback demo authentication for non-farmer roles
-      const loggedUser = await login(loginForm.email, loginForm.password)
-      const role = loggedUser?.role || selectedRole
-      if (role === 'admin' || role === 'verifier') {
-        navigate('/admin/farmers', { replace: true })
-      } else if (role === 'consumer') {
-        navigate('/consumer', { replace: true })
-      } else if (role === 'dealer') {
-        navigate('/dealer', { replace: true })
-      } else {
-        navigate(from ?? '/dashboard', { replace: true })
-      }
+      const result = await login(cleanEmail, password);
+      const destination =
+        location.state?.from?.pathname ||
+        authConfig.redirects.redirectAfterLogin(result?.user || result);
+      navigate(destination, { replace: true });
     } catch (err) {
-      setError('Invalid credentials. Note: Farmer login credentials are set ONLY by an Admin.')
+      setErrorMsg(err.message || 'Invalid email or password. Please verify your credentials.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-  // Toggle Crop Multi-Select Choice
-  const toggleCropSelection = (cropLabel) => {
-    setFarmerReg(prev => {
-      const exists = prev.crops_yield.includes(cropLabel)
-      if (exists) {
-        return { ...prev, crops_yield: prev.crops_yield.filter(c => c !== cropLabel) }
-      } else {
-        return { ...prev, crops_yield: [...prev.crops_yield, cropLabel] }
-      }
-    })
-  }
-
-  // Handle Register Submission
-  const handleRegisterSubmit = (e) => {
-    e.preventDefault()
-    setError('')
-
-    if (selectedRole === 'farmer') {
-      if (!farmerReg.full_name || !farmerReg.contact_number) {
-        setError('Please enter your Name and Phone Number.')
-        return
-      }
-
-      // Create Pending Farmer Registration Request
-      const pendingReg = farmStorage.createPendingFarmerRegistration(farmerReg)
-
-      setSubmittedModal({
-        type: 'farmer',
-        title: '🌾 Farmer Request Sent for Admin Approval!',
-        name: pendingReg.full_name,
-        details: [
-          `Farmer Name: ${pendingReg.full_name}`,
-          `Age: ${pendingReg.age || 'N/A'} years`,
-          `Area / Region: ${pendingReg.area_region || 'N/A'}`,
-          `Land Size: ${pendingReg.area_sq_acres}`,
-          `Selected Crops: ${pendingReg.crops_yield.join(', ') || 'General Crops'}`,
-          `🔑 Credential Status: PENDING ADMIN CREATION`,
-        ],
-        message: '🛡️ IMPORTANT: Farmer login credentials are set ONLY by an Admin. Your registration details have been sent to the Admin Management Platform. Once the Admin verifies your land survey and creates your credentials, you will receive your login details.',
-      })
-    } else if (selectedRole === 'consumer') {
-      if (!consumerReg.full_name || !consumerReg.email) {
-        setError('Please provide your Full Name and Email.')
-        return
-      }
-      farmStorage.saveUserCredential({
-        email: consumerReg.email,
-        password: consumerReg.password || 'consumer123',
-        role: 'consumer',
-        full_name: consumerReg.full_name,
-      })
-      setSubmittedModal({
-        type: 'consumer',
-        title: '🛒 Consumer Account Created Successfully!',
-        name: consumerReg.full_name,
-        details: [`Email: ${consumerReg.email}`, `Area / Place: ${consumerReg.area_place || 'Not specified'}`, `Role: Direct Farm Produce Consumer`],
-        message: 'Your consumer account is ready. You can now log in to order direct farm produce from verified FARM-XT growers.',
-      })
-    } else if (selectedRole === 'dealer') {
-      if (!dealerReg.business_name || !dealerReg.email) {
-        setError('Please provide your Business Name and Email.')
-        return
-      }
-      farmStorage.saveUserCredential({
-        email: dealerReg.email,
-        password: dealerReg.password || 'dealer123',
-        role: 'dealer',
-        full_name: dealerReg.business_name,
-      })
-      setSubmittedModal({
-        type: 'dealer',
-        title: '🏢 Agri-Dealer Account Created Successfully!',
-        name: dealerReg.business_name,
-        details: [`Business: ${dealerReg.business_name}`, `Dealership Area / Place: ${dealerReg.area_place || dealerReg.region_territory}`],
-        message: 'Your dealership portal account is active. You can log in to supply seeds, fertilizers, and IoT hardware to registered farmers.',
-      })
-    } else if (selectedRole === 'admin') {
-      if (!adminReg.email) {
-        setError('Please provide your Admin Email.')
-        return
-      }
-      const adminName = adminReg.email.split('@')[0] || 'System Admin'
-      farmStorage.saveUserCredential({
-        email: adminReg.email,
-        password: adminReg.password || 'admin123',
-        role: 'admin',
-        full_name: adminName,
-      })
-      setSubmittedModal({
-        type: 'admin',
-        title: '⚙️ Admin Credentials Generated!',
-        name: adminName,
-        details: [`Admin Email: ${adminReg.email}`, `Role: Master System Administrator`],
-        message: 'Your admin account has been created. You can log in to review pending farmer registrations and manage platform boundaries.',
-      })
-    }
-  }
-
-  const targetHomePath = user ? (user.role === 'farmer' ? '/farmer' : (user.role === 'admin' || user.role === 'verifier' ? '/admin/farmers' : (user.role === 'consumer' || user.role === 'dealer' ? '/marketplace' : '/dashboard'))) : '/'
-
-  useEffect(() => {
-    recordNavRoute(location.pathname, location.search)
-  }, [location.pathname, location.search])
-
-  const handleGoBack = (e) => {
-    if (e && typeof e.preventDefault === 'function') e.preventDefault()
-    if (mode === 'register') {
-      setMode('login')
-      setSelectedRole('farmer')
-      setError('')
-      setSuccessMsg('')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      return
-    }
-
-    const trail = getNavTrail()
-    const current = location.pathname + (location.search || '')
-    while (trail.length > 0 && trail[trail.length - 1] === current) {
-      trail.pop()
-    }
-    if (trail.length > 0) {
-      const prev = trail.pop()
-      saveNavTrail(trail)
-      if (prev && prev !== current) {
-        navigate(prev)
-        return
-      }
-    }
-    if (window.history.state && typeof window.history.state.idx === 'number' && window.history.state.idx > 0) {
-      navigate(-1)
-      return
-    }
-    navigate('/showcase')
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-v2v-softwhite bg-gradient-to-br from-[#F4F3F9] via-[#E4DFEB] to-[#FFFFFF] dark:bg-[#0F0421] dark:bg-gradient-to-br dark:from-[#120326] dark:via-[#2A0C58] dark:to-[#0A0017] flex items-center justify-center p-4 relative overflow-hidden selection:bg-purple-500 selection:text-white transition-colors duration-200">
-      {/* Top right header actions (Go Back & Theme toggle) */}
-      <div className="absolute top-5 right-5 z-20 flex items-center gap-2.5">
-        <button
-          type="button"
-          onClick={handleGoBack}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-full text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-800/80 hover:bg-v2v-purple hover:text-white dark:hover:bg-purple-900/80 dark:hover:text-purple-200 border border-purple-200/80 dark:border-slate-700/80 backdrop-blur-md shadow-sm transition-all cursor-pointer"
-          title="Go to previous page"
-        >
-          <span className="text-sm font-black">←</span>
-          <span>Go Back</span>
-        </button>
-        <ThemeToggle variant="pill" />
-      </div>
+    <div className="agrimap-auth-page">
+      {/* Top Header: V2V Tech AGRIMAP DSP & Support */}
+      <BrandHeader />
 
-      {/* Background Decorative Orbs */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-purple-500/10 dark:bg-purple-600/15 rounded-full blur-[130px] pointer-events-none" />
-      <div className="absolute -top-20 -left-20 w-80 h-80 bg-v2v-lavender/30 dark:bg-v2v-electric/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-purple-400/20 dark:bg-purple-700/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Main Login Card Container (Reference Image 2) */}
+      <main className="agrimap-login-container">
+        <div className="agrimap-login-card">
+          <h1 className="agrimap-card-title">Sign in to AgriMap</h1>
+          <p className="agrimap-card-subtitle">
+            Enter your credentials to access the verified agricultural spatial platform.
+          </p>
 
-      {/* Grid Pattern Overlay */}
-      <div 
-        className="absolute inset-0 opacity-[0.04] dark:opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
-          backgroundSize: '32px 32px'
-        }}
-      />
-
-      <div className="w-full max-w-xl relative z-10 my-6">
-        {/* Top Brand Banner — Exact FARM-XT Logo & Styling */}
-        <div className="text-center mb-6 flex flex-col items-center">
-          <Link
-            to="/"
-            onClick={() => {
-              setMode('login')
-              setSelectedRole('farmer')
-              setError('')
-              setSuccessMsg('')
-              window.scrollTo({ top: 0, behavior: 'smooth' })
-            }}
-            className="inline-flex items-center gap-3 select-none group transform hover:scale-105 transition-all duration-300 cursor-pointer"
-          >
-            <div className="relative flex-shrink-0">
-              <img
-                src="/images/v2v-icon.png"
-                alt="FARM-XT Logo"
-                className="h-14 w-14 object-contain filter drop-shadow-md group-hover:scale-110 transition-all duration-300"
-              />
-              <div className="absolute inset-0 bg-purple-500/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-            </div>
-            <div className="flex flex-col text-left">
-              <div className="font-black text-2xl tracking-tight leading-none flex items-center gap-1.5 text-v2v-deep dark:text-white">
-                <span>FARM-XT</span>
-                <span className="text-v2v-purple dark:text-purple-300 font-extrabold text-lg">DSP</span>
-              </div>
-              <div className="font-bold tracking-widest uppercase font-mono text-[10px] text-v2v-violet dark:text-purple-200/90 mt-0.5">
-                Digital Farmland & Ecosystem Platform
-              </div>
-            </div>
-          </Link>
-          <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-v2v-deep/10 dark:bg-purple-900/60 text-v2v-deep dark:text-purple-200 text-xs font-semibold border border-v2v-purple/30 dark:border-purple-500/30 backdrop-blur-md shadow-lg shadow-v2v-deep/10 dark:shadow-purple-950/40">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-            <span>V2V Agrilythos · Smart Agriculture Initiative</span>
-          </div>
-        </div>
-
-        {/* Main Gateway Card */}
-        <div className="card p-6 sm:p-8 border border-purple-100 dark:border-slate-800 shadow-2xl relative overflow-hidden transition-all duration-300">
-          
-          {/* Main Gateway Mode Selector (LOGIN vs REGISTER) */}
-          <div className="flex items-center justify-between mb-6 p-1.5 rounded-2xl bg-v2v-softwhite border border-v2v-border">
-            <button
-              onClick={() => { setMode('login'); setError(''); setSuccessMsg('') }}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-2 ${
-                mode === 'login'
-                  ? 'bg-v2v-gradient text-white shadow-md shadow-v2v-purple/30'
-                  : 'text-gray-600 hover:text-v2v-deep'
-              }`}
-            >
-              <span>🔑</span>
-              <span>SIGN IN (LOGIN)</span>
-            </button>
-            <button
-              onClick={() => { setMode('register'); setError(''); setSuccessMsg('') }}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 flex items-center justify-center gap-2 ${
-                mode === 'register'
-                  ? 'bg-v2v-gradient text-white shadow-md shadow-v2v-purple/30'
-                  : 'text-gray-600 hover:text-v2v-deep'
-              }`}
-            >
-              <span>📝</span>
-              <span>CREATE ACCOUNT (REGISTER)</span>
-            </button>
-          </div>
-
-          {/* 4 Role Selector Tabs (Farmer, Consumer, Dealer, Admin) */}
-          <div className="mb-6">
-            <div className="text-xs font-bold uppercase tracking-wider text-v2v-deep mb-2 flex items-center justify-between">
-              <span>Select Your Role Portal:</span>
-              <span className="text-[10px] text-purple-600 font-bold uppercase">Role: {selectedRole}</span>
-            </div>
-            <div className="grid grid-cols-4 gap-1.5 bg-gray-100 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-gray-200 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => setSelectedRole('farmer')}
-                className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all flex flex-col items-center gap-0.5 ${
-                  selectedRole === 'farmer'
-                    ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/30 ring-2 ring-purple-400'
-                    : 'text-gray-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
-                }`}
-              >
-                <span className="text-sm">🧑‍🌾</span>
-                <span>Farmer</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedRole('consumer')}
-                className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all flex flex-col items-center gap-0.5 ${
-                  selectedRole === 'consumer'
-                    ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/30 ring-2 ring-purple-400'
-                    : 'text-gray-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
-                }`}
-              >
-                <span className="text-sm">🛒</span>
-                <span>Consumer</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedRole('dealer')}
-                className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all flex flex-col items-center gap-0.5 ${
-                  selectedRole === 'dealer'
-                    ? 'bg-v2v-deep text-white shadow-md shadow-v2v-deep/30 ring-2 ring-purple-400'
-                    : 'text-gray-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
-                }`}
-              >
-                <span className="text-sm">🏢</span>
-                <span>Dealer</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedRole('admin')}
-                className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all flex flex-col items-center gap-0.5 ${
-                  selectedRole === 'admin'
-                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30 ring-2 ring-amber-400'
-                    : 'text-gray-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
-                }`}
-                title="Admin Maintenance & System Operations Portal"
-              >
-                <span className="text-sm">🛠️</span>
-                <span className="leading-tight text-center">Maintenance (Admin)</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Error & Success Messages */}
-          {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium flex items-start gap-2.5 animate-fade-in">
-              <span className="text-base flex-shrink-0">⚠️</span>
-              <div className="flex-1">{error}</div>
-            </div>
-          )}
-          {successMsg && (
-            <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-semibold flex items-start gap-2.5 animate-fade-in">
-              <span className="text-base flex-shrink-0">✅</span>
-              <div className="flex-1">{successMsg}</div>
+          {/* Registration Success Banner */}
+          {registrationSuccessMsg && !errorMsg && (
+            <div className="agrimap-alert agrimap-alert--success" role="status">
+              <ShieldCheck size={18} style={{ flexShrink: 0 }} />
+              <span>{registrationSuccessMsg}</span>
             </div>
           )}
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* MODE 1: LOGIN FORM                                           */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {mode === 'login' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              {selectedRole === 'farmer' && (
-                <div className="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-800/60 text-xs text-purple-900 dark:text-purple-200 mb-2 flex items-start gap-2">
-                  <span className="text-base flex-shrink-0">🔑</span>
-                  <div>
-                    <span className="font-extrabold block">Admin-Issued Farmer Credentials Only</span>
-                    <span className="text-[11px] text-purple-800 dark:text-purple-300">Farmer login credentials are set & issued ONLY by an Admin upon registration approval.</span>
-                  </div>
-                </div>
-              )}
+          {/* Error Alert */}
+          {errorMsg && (
+            <div className="agrimap-alert agrimap-alert--error" role="alert" aria-live="polite">
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-              <div>
-                <label className="label">
-                  {selectedRole === 'farmer' ? 'Farmer Email / Registered ID:' : selectedRole === 'admin' ? 'Maintenance Admin Email / ID:' : `${selectedRole.toUpperCase()} Email / Login:`}
-                </label>
+          <form onSubmit={handleSubmit} noValidate>
+            {/* Email Address */}
+            <div className="agrimap-form-group">
+              <label htmlFor="login-email" className="agrimap-label">
+                EMAIL ADDRESS
+              </label>
+              <div className="agrimap-input-wrapper">
+                <span className="agrimap-input-icon-left">
+                  <Mail size={18} />
+                </span>
                 <input
-                  type="text"
+                  id="login-email"
+                  type="email"
+                  className="agrimap-input"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="username"
                   required
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                  placeholder={
-                    selectedRole === 'farmer' ? 'farmer@v2vtech.com' :
-                    selectedRole === 'admin' ? 'admin@farmxt.com' : `${selectedRole}@farmxt.com`
-                  }
-                  className="input-field"
+                  disabled={loading}
                 />
               </div>
+            </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="label mb-0">Password:</label>
+            {/* Password */}
+            <div className="agrimap-form-group">
+              <label htmlFor="login-password" className="agrimap-label">
+                PASSWORD
+              </label>
+              <div className="agrimap-input-wrapper">
+                <span className="agrimap-input-icon-left">
+                  <Lock size={18} />
+                </span>
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  className="agrimap-input"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  disabled={loading}
+                />
+                <div className="agrimap-input-icon-right">
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-[11px] font-semibold text-v2v-purple hover:underline"
+                    className="agrimap-btn-icon"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? 'Hide' : 'Show'}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  placeholder="••••••••"
-                  className="input-field"
-                />
               </div>
 
+              {/* Forgot Password Link */}
               <button
-                type="submit"
-                disabled={loading}
-                className={`w-full py-3 text-sm font-bold rounded-xl shadow-lg mt-2 flex items-center justify-center gap-2 ${
-                  selectedRole === 'admin'
-                    ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white shadow-amber-600/30 hover:opacity-95'
-                    : 'btn-v2v-gradient'
-                }`}
+                type="button"
+                onClick={() => setShowForgotModal(true)}
+                className="agrimap-forgot-link"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
-                {loading ? (
-                  <span>Authenticating...</span>
-                ) : (
-                  <>
-                    <span>
-                      {selectedRole === 'admin'
-                        ? 'Sign In to Maintenance (Admin Portal)'
-                        : `Sign In as ${selectedRole.toUpperCase()}`}
-                    </span>
-                    <span>→</span>
-                  </>
-                )}
+                Forgot password?
               </button>
-            </form>
-          )}
+            </div>
 
-          {/* ──────────────────────────────────────────────────────────── */}
-          {/* MODE 2: REGISTER FORM                                        */}
-          {/* ──────────────────────────────────────────────────────────── */}
-          {mode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-              
-              {/* 1) FARMER REGISTRATION FORM */}
-              {selectedRole === 'farmer' && (
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="agrimap-btn-submit"
+              aria-busy={loading}
+            >
+              {loading ? (
                 <>
-                  <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border-2 border-amber-300 dark:border-amber-700/60 text-xs text-amber-950 dark:text-amber-200 mb-3 shadow-sm">
-                    <div className="font-extrabold text-amber-900 dark:text-amber-100 flex items-center gap-1.5 text-xs mb-1">
-                      <span>🔒 ADMIN-ONLY CREDENTIAL CREATION</span>
-                    </div>
-                    <span>Farmer login credentials <strong>cannot be self-created</strong>. Submitting your farmland details sends a pending registration request to the Admin. The Admin will review your land survey and generate/issue your official login credentials.</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="label">1) Farmer Name *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Ramesh Patel"
-                        value={farmerReg.full_name}
-                        onChange={(e) => setFarmerReg({ ...farmerReg, full_name: e.target.value })}
-                        className="input-field"
-                      />
-                    </div>
-                    <div>
-                      <label className="label">2) Age *</label>
-                      <input
-                        type="number"
-                        required
-                        placeholder="e.g. 42"
-                        value={farmerReg.age}
-                        onChange={(e) => setFarmerReg({ ...farmerReg, age: e.target.value })}
-                        className="input-field"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="label">3) Area / Region *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Anand District, Gujarat"
-                        value={farmerReg.area_region}
-                        onChange={(e) => setFarmerReg({ ...farmerReg, area_region: e.target.value })}
-                        className="input-field"
-                      />
-                    </div>
-                    <div>
-                      <label className="label">4) Contact Number *</label>
-                      <input
-                        type="tel"
-                        required
-                        placeholder="+91 98452 11029"
-                        value={farmerReg.contact_number}
-                        onChange={(e) => setFarmerReg({ ...farmerReg, contact_number: e.target.value })}
-                        className="input-field"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="label">5) Land Physical Address *</label>
-                    <textarea
-                      rows={2}
-                      required
-                      placeholder="e.g. Survey No. 248/A, Near Sub-Station, Anand District, Gujarat 388001"
-                      value={farmerReg.land_address}
-                      onChange={(e) => setFarmerReg({ ...farmerReg, land_address: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="label">6) Total Land Area (Sq. Ft / Acres) *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 18.5 Acres (805,860 sq. ft)"
-                      value={farmerReg.area_sq_acres}
-                      onChange={(e) => setFarmerReg({ ...farmerReg, area_sq_acres: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-
-                  {/* Multi-Select Crops Yield Section */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="label mb-0">7) Cultivated Seeds & Crops Yield *</label>
-                      <span className="text-[10px] text-purple-700 font-bold">(Select multiple)</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl">
-                      {SEED_CROP_OPTIONS.map((crop) => {
-                        const isSelected = farmerReg.crops_yield.includes(crop.label)
-                        return (
-                          <button
-                            type="button"
-                            key={crop.id}
-                            onClick={() => toggleCropSelection(crop.label)}
-                            className={`p-2 rounded-lg text-left text-xs font-semibold transition-all flex items-center gap-1.5 border ${
-                              isSelected
-                                ? 'bg-v2v-deep text-white border-purple-500 shadow-sm'
-                                : 'bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600'
-                            }`}
-                          >
-                            <span>{crop.icon}</span>
-                            <span className="truncate">{crop.label}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
+                  <span className="agrimap-spinner" />
+                  <span>Signing In...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight size={18} />
                 </>
               )}
+            </button>
+          </form>
 
-              {/* 2) CONSUMER REGISTRATION FORM */}
-              {selectedRole === 'consumer' && (
-                <>
-                  <div>
-                    <label className="label">Consumer Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Ananya Sharma"
-                      value={consumerReg.full_name}
-                      onChange={(e) => setConsumerReg({ ...consumerReg, full_name: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Area / Place / City Location *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Anand, Gujarat / Sector 4"
-                      value={consumerReg.area_place}
-                      onChange={(e) => setConsumerReg({ ...consumerReg, area_place: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Email Address *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="consumer@farmxt.com"
-                      value={consumerReg.email}
-                      onChange={(e) => setConsumerReg({ ...consumerReg, email: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Contact Number *</label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+91 98765 12345"
-                      value={consumerReg.contact_number}
-                      onChange={(e) => setConsumerReg({ ...consumerReg, contact_number: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Password *</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={consumerReg.password}
-                      onChange={(e) => setConsumerReg({ ...consumerReg, password: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* 3) DEALER REGISTRATION FORM */}
-              {selectedRole === 'dealer' && (
-                <>
-                  <div>
-                    <label className="label">Dealership / Business Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. AgriTech Fertilizer & Seed Traders"
-                      value={dealerReg.business_name}
-                      onChange={(e) => setDealerReg({ ...dealerReg, business_name: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Dealership Area / Operating Place *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Anand & Kheda District, Gujarat"
-                      value={dealerReg.area_place}
-                      onChange={(e) => setDealerReg({ ...dealerReg, area_place: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Business Email *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="dealer@farmxt.com"
-                      value={dealerReg.email}
-                      onChange={(e) => setDealerReg({ ...dealerReg, email: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">GSTIN / Business License No. *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="GSTIN24AAACG1234F1Z5"
-                      value={dealerReg.gstin_license}
-                      onChange={(e) => setDealerReg({ ...dealerReg, gstin_license: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Password *</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={dealerReg.password}
-                      onChange={(e) => setDealerReg({ ...dealerReg, password: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* 4) ADMIN REGISTRATION FORM */}
-              {selectedRole === 'admin' && (
-                <>
-                  <div>
-                    <label className="label">Admin Email *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="admin@farmxt.com"
-                      value={adminReg.email}
-                      onChange={(e) => setAdminReg({ ...adminReg, email: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Password *</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={adminReg.password}
-                      onChange={(e) => setAdminReg({ ...adminReg, password: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-                </>
-              )}
-
-              <button
-                type="submit"
-                className={`w-full py-3 text-sm font-bold rounded-xl shadow-lg mt-3 flex items-center justify-center gap-2 ${
-                  selectedRole === 'admin'
-                    ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white shadow-amber-600/30 hover:opacity-95'
-                    : 'btn-v2v-gradient'
-                }`}
-              >
-                <span>
-                  {selectedRole === 'farmer'
-                    ? 'Submit Request for Admin Credential Creation'
-                    : selectedRole === 'admin'
-                    ? 'Register Maintenance Admin Account'
-                    : `Submit ${selectedRole.toUpperCase()} Registration`}
-                </span>
-                <span>→</span>
-              </button>
-            </form>
-          )}
+          {/* Switch to Register */}
+          <div className="agrimap-switch-row">
+            <span>Don't have an account?</span>
+            <Link to="/register" className="agrimap-switch-link">
+              Create an account
+            </Link>
+          </div>
         </div>
-      </div>
 
-      {/* ── Registration Submission Confirmation Modal ── */}
-      {submittedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-purple-200 dark:border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
-              <h3 className="text-lg font-extrabold text-v2v-deep dark:text-purple-300 tracking-tight">{submittedModal.title}</h3>
-              <button
-                onClick={() => setSubmittedModal(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg font-bold"
-              >
-                ✕
-              </button>
+        {/* Security / Encryption Footer */}
+        <div className="agrimap-security-footer">
+          <ShieldCheck size={16} className="agrimap-security-icon" />
+          <span>Protected by 256-bit PostGIS spatial security and encrypted authentication.</span>
+        </div>
+      </main>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowForgotModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-[#E7E0F0] text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-full bg-[#F5F3FA] text-[#6530A0] flex items-center justify-center mx-auto mb-3">
+              <Lock size={22} />
             </div>
-
-            <div className="bg-purple-50 dark:bg-purple-950/40 p-4 rounded-2xl border border-purple-200 dark:border-purple-800/60 text-xs text-purple-950 dark:text-purple-200 space-y-1">
-              <div className="font-bold text-sm text-v2v-deep dark:text-purple-300 mb-1">Registration Summary:</div>
-              {submittedModal.details.map((item, idx) => (
-                <div key={idx} className="font-semibold">{item}</div>
-              ))}
-            </div>
-
-            <p className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">
-              {submittedModal.message}
+            <h3 className="text-base font-bold text-[#25143E] mb-2">Password Recovery</h3>
+            <p className="text-xs text-[#82758F] leading-relaxed mb-5">
+              To securely recover your account credentials or reset your password, contact your
+              district administrator or reach support at{' '}
+              <a href="mailto:support@v2vtech.com" className="text-[#6530A0] font-semibold underline">
+                support@v2vtech.com
+              </a>.
             </p>
-
-            <div className="pt-2 flex items-center justify-end gap-3">
-              <button
-                onClick={() => {
-                  setSubmittedModal(null)
-                  setMode('login')
-                }}
-                className="btn-v2v-gradient text-xs py-2.5 px-5 rounded-xl font-bold"
-              >
-                Proceed to Sign In →
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(false)}
+              className="w-full py-2.5 rounded-xl bg-[#35105F] text-white text-xs font-semibold hover:bg-[#6530A0] transition-colors"
+            >
+              Dismiss
+            </button>
           </div>
         </div>
       )}
+
+      {/* Page Base Spacer */}
+      <footer style={{ height: '1.5rem' }} />
     </div>
-  )
+  );
 }

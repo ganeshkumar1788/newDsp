@@ -1,5 +1,31 @@
+import os
 from typing import List
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
+try:
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except ImportError:
+    try:
+        from pydantic import BaseSettings
+        SettingsConfigDict = dict
+    except ImportError:
+        class BaseSettings:  # type: ignore
+            def __init__(self, **values):
+                for key, val in self.__class__.__dict__.items():
+                    if not key.startswith("_") and not callable(val) and not isinstance(val, property):
+                        env_val = os.getenv(key)
+                        if env_val is not None:
+                            try:
+                                val_type = type(val)
+                                setattr(self, key, val_type(env_val))
+                            except Exception:
+                                setattr(self, key, env_val)
+                        else:
+                            setattr(self, key, val)
+                for key, val in values.items():
+                    setattr(self, key, val)
+
+        def SettingsConfigDict(**kwargs):  # type: ignore
+            return kwargs
 
 
 class Settings(BaseSettings):

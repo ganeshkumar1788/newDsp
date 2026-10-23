@@ -1,188 +1,350 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import V2VLogo from '../components/common/V2VLogo'
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
+  Sprout,
+  ShoppingBag,
+  Store,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { BrandHeader } from '../auth/components/BrandHeader';
+import { authConfig } from '../auth/authConfig';
+import '../auth/styles/auth.css';
+
+// Role Icons map using Lucide outline icons
+const ROLE_ICONS = {
+  farmer: <Sprout size={18} />,
+  consumer: <ShoppingBag size={18} />,
+  dealer: <Store size={18} />,
+};
 
 export default function RegisterPage() {
-  const { register } = useAuth()
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const { user, register } = useAuth();
 
-  const [form, setForm] = useState({
-    email: '',
-    full_name: '',
-    password: '',
-    role: 'farmer',
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [selectedRole, setSelectedRole] = useState(() => authConfig.signupRoles[0]?.id || 'farmer');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Auto-redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate(authConfig.redirects.redirectAfterLogin(user), { replace: true });
+    }
+  }, [user, navigate]);
+
+  const activeRoleConfig =
+    authConfig.signupRoles.find((r) => r.id === selectedRole) || authConfig.signupRoles[0];
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      await register(form)
-      navigate('/login', { state: { message: 'Account created successfully! Please sign in.' } })
-    } catch (err) {
-      const detail = err.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : 'Registration failed. Please check your information and try again.')
-    } finally {
-      setLoading(false)
+    e.preventDefault();
+    if (loading) return;
+
+    setErrorMsg('');
+    const cleanName = fullName.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanName) {
+      setErrorMsg('Please enter your full name.');
+      return;
     }
-  }
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+    if (password.length < (authConfig.passwordRules?.minLength || 6)) {
+      setErrorMsg(`Password must be at least ${authConfig.passwordRules?.minLength || 6} characters.`);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please verify your password entry.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register({
+        full_name: cleanName,
+        email: cleanEmail,
+        password,
+        role: selectedRole,
+      });
+
+      navigate('/login', {
+        state: {
+          message: `Your ${activeRoleConfig.title} account was created successfully! Please sign in.`,
+        },
+      });
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      const msg =
+        typeof detail === 'string'
+          ? detail
+          : err.message || 'Registration failed. Please check your information and try again.';
+      setErrorMsg(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#0F0421] bg-gradient-to-br from-[#120326] via-[#2A0C58] to-[#0A0017] flex items-center justify-center p-4 relative overflow-hidden selection:bg-purple-500 selection:text-white">
-      {/* Background Decorative Neon Glow Orbs */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/15 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute -top-20 -left-20 w-80 h-80 bg-v2v-electric/40 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-purple-700/20 rounded-full blur-3xl pointer-events-none" />
+    <div className="agrimap-auth-page">
+      {/* Top Header: V2V Tech AGRIMAP DSP & Support */}
+      <BrandHeader />
 
-      {/* Grid Pattern Overlay */}
-      <div 
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-          backgroundSize: '32px 32px'
-        }}
-      />
+      {/* Main Split-Panel Registration Container (Reference Image 1) */}
+      <main className="agrimap-register-container">
+        <div className="agrimap-split-card">
+          {/* Left Branding Panel */}
+          <div className="agrimap-hero-panel">
+            <div className="agrimap-hero-pattern" />
+            <div className="agrimap-hero-glow" />
 
-      <div className="w-full max-w-md relative z-10 my-8">
-        {/* Top Brand Banner */}
-        <div className="text-center mb-6 flex flex-col items-center">
-          <Link to="/" className="inline-block transform hover:scale-105 transition-all duration-300">
-            <V2VLogo size="lg" variant="light" />
-          </Link>
-          <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-purple-900/60 text-purple-200 text-xs font-semibold border border-purple-500/30 backdrop-blur-md shadow-lg shadow-purple-950/40">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Smart Agriculture · New Member Registration</span>
-          </div>
-        </div>
-
-        {/* Register Card */}
-        <div className="bg-white rounded-3xl shadow-2xl shadow-black/60 p-7 sm:p-9 border border-purple-100 relative overflow-hidden transition-all duration-300 hover:shadow-purple-950/50">
-          <div className="flex items-center justify-between mb-6 pb-2 border-b border-gray-100">
-            <div>
-              <h2 className="text-xl font-extrabold text-v2v-deep tracking-tight">
-                Create Account
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Join the V2V Smart Agriculture Platform
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div className="agrimap-ecosystem-badge">
+                <ShieldCheck size={14} />
+                <span>V2V Tech Ecosystem</span>
+              </div>
+              <h2 className="agrimap-hero-heading">Create Your Account</h2>
+              <p className="agrimap-hero-desc">
+                Connecting farmers, consumers, dealers, and spatial agricultural data across the
+                unified AgriMap platform.
               </p>
             </div>
-            <Link 
-              to="/login" 
-              className="text-xs font-semibold text-purple-600 hover:text-purple-800 px-2.5 py-1 rounded-lg hover:bg-purple-50 transition-colors"
-            >
-              Sign In →
-            </Link>
+
+            <div className="agrimap-hero-footer" style={{ position: 'relative', zIndex: 1 }}>
+              {authConfig.brand.companyName}
+            </div>
           </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-start gap-2">
-              <span className="text-rose-500 font-bold">⚠️</span>
-              <span>{error}</span>
-            </div>
-          )}
+          {/* Right Registration Form */}
+          <div className="agrimap-form-panel">
+            <span className="agrimap-step-tag">STEP 1 OF 1 · INSTANT ACCOUNT CREATION</span>
+            <h1 className="agrimap-card-title">Join AgriMap</h1>
+            <p className="agrimap-card-subtitle" style={{ marginBottom: '1.25rem' }}>
+              Select your role and create your verified account.
+            </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-300 focus:border-purple-600 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
-                placeholder="e.g. Ramesh Patel"
-                value={form.full_name}
-                onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                required
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-300 focus:border-purple-600 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
-                placeholder="farmer@v2vfarm.in"
-                value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                autoComplete="email"
-              />
+            {/* Role Cards (Farmer, Consumer, Dealer) */}
+            <div className="agrimap-role-grid" role="radiogroup" aria-label="Select Account Role">
+              {authConfig.signupRoles.map((role) => {
+                const isSelected = selectedRole === role.id;
+                return (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedRole(role.id);
+                      setErrorMsg('');
+                    }}
+                    role="radio"
+                    aria-checked={isSelected}
+                    className={`agrimap-role-card ${isSelected ? 'agrimap-role-card--active' : ''}`}
+                  >
+                    <div className="agrimap-role-icon">{ROLE_ICONS[role.id]}</div>
+                    <span className="agrimap-role-title">{role.title}</span>
+                    <span className="agrimap-role-badge">{role.badge}</span>
+                  </button>
+                );
+              })}
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-gray-700">
-                  Password (min 8 chars) *
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-[11px] text-purple-600 hover:text-purple-800 font-semibold"
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={8}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-300 focus:border-purple-600 focus:ring-2 focus:ring-purple-200 outline-none transition-all pr-10"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
-                >
-                  {showPassword ? '👁️' : '🔒'}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Platform Role
-              </label>
-              <select
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-gray-300 focus:border-purple-600 focus:ring-2 focus:ring-purple-200 outline-none transition-all bg-white"
-                value={form.role}
-                onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-              >
-                <option value="farmer">🧑‍🌾 Farmer / Land Owner</option>
-                <option value="verifier">🛡️ Cadastral Land Verifier</option>
-                <option value="admin">⚙️ Platform Administrator</option>
-              </select>
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={loading} 
-              className="w-full py-3 mt-2 text-xs font-bold text-white rounded-xl bg-gradient-to-r from-v2v-deep via-purple-700 to-v2v-lavender shadow-lg shadow-purple-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+            {/* Selected Role Summary */}
+            <div
+              style={{
+                backgroundColor: '#FAF8FD',
+                border: '1px solid #E7E0F0',
+                borderRadius: '10px',
+                padding: '0.65rem 0.85rem',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.78125rem',
+                color: '#6530A0',
+              }}
             >
-              {loading ? 'Creating Account…' : 'Create V2V Account →'}
-            </button>
-          </form>
+              <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+              <span>
+                Registering as a <strong>{activeRoleConfig.title}</strong>: {activeRoleConfig.desc}
+              </span>
+            </div>
 
-          <p className="text-center text-xs text-gray-500 mt-6 pt-4 border-t border-gray-100">
-            Already registered on AgriMap DSP?{' '}
-            <Link to="/login" className="text-purple-700 hover:text-purple-900 font-bold hover:underline">
-              Sign in
-            </Link>
-          </p>
+            {/* Error Message */}
+            {errorMsg && (
+              <div className="agrimap-alert agrimap-alert--error" role="alert" aria-live="polite">
+                <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} noValidate>
+              {/* Full Name */}
+              <div className="agrimap-form-group">
+                <label htmlFor="reg-fullname" className="agrimap-label">
+                  FULL NAME
+                </label>
+                <div className="agrimap-input-wrapper">
+                  <span className="agrimap-input-icon-left">
+                    <User size={18} />
+                  </span>
+                  <input
+                    id="reg-fullname"
+                    type="text"
+                    className="agrimap-input"
+                    placeholder="e.g. Ramesh Patel"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    autoComplete="name"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              {/* Email Address */}
+              <div className="agrimap-form-group">
+                <label htmlFor="reg-email" className="agrimap-label">
+                  EMAIL ADDRESS
+                </label>
+                <div className="agrimap-input-wrapper">
+                  <span className="agrimap-input-icon-left">
+                    <Mail size={18} />
+                  </span>
+                  <input
+                    id="reg-email"
+                    type="email"
+                    className="agrimap-input"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="agrimap-form-group">
+                <label htmlFor="reg-password" className="agrimap-label">
+                  PASSWORD
+                </label>
+                <div className="agrimap-input-wrapper">
+                  <span className="agrimap-input-icon-left">
+                    <Lock size={18} />
+                  </span>
+                  <input
+                    id="reg-password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="agrimap-input"
+                    placeholder="At least 6 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                    disabled={loading}
+                  />
+                  <div className="agrimap-input-icon-right">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="agrimap-btn-icon"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="agrimap-form-group">
+                <label htmlFor="reg-confirm-password" className="agrimap-label">
+                  CONFIRM PASSWORD
+                </label>
+                <div className="agrimap-input-wrapper">
+                  <span className="agrimap-input-icon-left">
+                    <Lock size={18} />
+                  </span>
+                  <input
+                    id="reg-confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="agrimap-input"
+                    placeholder="Repeat your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                    disabled={loading}
+                  />
+                  <div className="agrimap-input-icon-right">
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="agrimap-btn-icon"
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Role Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="agrimap-btn-submit"
+                aria-busy={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="agrimap-spinner" />
+                    <span>Creating Account...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Create {activeRoleConfig.title} Account</span>
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Switch to Login */}
+            <div className="agrimap-switch-row">
+              <span>Already have an account?</span>
+              <Link to="/login" className="agrimap-switch-link">
+                Sign In
+              </Link>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  )
-}
 
+        {/* Security / Encryption Footer */}
+        <div className="agrimap-security-footer">
+          <ShieldCheck size={16} className="agrimap-security-icon" />
+          <span>Protected by 256-bit PostGIS spatial security and encrypted authentication.</span>
+        </div>
+      </main>
+
+      {/* Page Base Spacer */}
+      <footer style={{ height: '1.5rem' }} />
+    </div>
+  );
+}
