@@ -1,32 +1,72 @@
 # V2V AgriMap DSP — Implementation & Handoff Report
 
+- **Date**: 2026-10-29
+- **Branch**: `update/2026-10-29-agrimap-integration`
+- **Base Branch**: `main`
+- **Compare / PR URL**: https://github.com/KishoreKumar0407/newDsp/compare/main...update/2026-10-29-agrimap-integration
+- **Status**: Not merged — needs teammate review
+
+---
+
 ## 1. Executive Summary
-This branch (`feat/shared-google-map-and-requests`) delivers **ONE shared, premium Google Map (`AgriMap.jsx`)** across the Farmer (`/farmer`), Admin Land & Boundary Studio (`/admin/editor/:fieldId`), and Surveyor (`/map/:fieldId`) portals. It introduces a complete, non-destructive **9-type Farmer Change Request Workflow** where farmers submit requests for admin review rather than editing directly.
+This branch consolidates and finalizes the complete **V2V AgriMap DSP Platform**:
+1. **ONE Shared Interactive Google Map (`AgriMap.jsx`)**: Seamlessly shared across Farmer (`/farmer`), Admin Land & Boundary Studio (`/admin/editor/:fieldId`), and Surveyor (`/map/:fieldId`) portals.
+2. **Farmer Change Request Workflow**: Complete 9-type request pipeline with attachment constraints, role validation, status lifecycle, and a dedicated Admin Inbox (`/admin/requests`).
+3. **FarmXT Modern Authentication**: Centralized auth configuration (`authConfig.js`), role-based dashboard routing, and zero-error navigation.
+4. **V2V Logo & Navigation Flow**: Clicking the V2V logo returns the user directly to their role-specific dashboard. A persistent "Go back" button provides reliable step-back navigation across all pages.
+5. **Consumer & Dealer Portals**: Full catalog, bulk buying, cart, checkout, and order history pages functional with zero errors.
 
 ---
 
-## 2. Secrets & Security Enforcement
-- **Known Exception**: Commits `7ccc33d`, `cd347dc`, and `9bcd346` contained the old Google Maps key in the git history. As directed, no force push or history rewrite was performed; the user has rotated the key in Google Cloud Console.
+## 2. How to Get and Run It
+
+To pull and run this work locally:
+
+```powershell
+# 1. Fetch latest refs and checkout branch
+git fetch origin
+git checkout update/2026-10-29-agrimap-integration
+
+# 2. Install dependencies & run frontend tests
+cd frontend
+npm install
+npm test
+
+# 3. Start the development server
+npm run dev
+```
+
+---
+
+## 3. Environment Variable Names Only
+
+Place local secrets in `.env.local` (never commit real values):
+- `VITE_GOOGLE_MAPS_API_KEY`: Google Maps JavaScript API key with Maps, Marker, Geometry, and Places libraries enabled.
+- `VITE_GOOGLE_MAP_ID`: Vector / Advanced Marker Map ID.
+- `VITE_API_URL`: Backend API base URL (defaults to `http://localhost:8000`).
+- `OPENAI_API_KEY`: (Backend optional) For AI demand and scoring insights.
+
+---
+
+## 4. Secrets & Security Enforcement
+- **Known Exception**: Commits `7ccc33d`, `cd347dc`, and `9bcd346` contained the old Google Maps key in the git history. As directed, no force push or history rewrite was performed; the key was rotated in Google Cloud Console.
 - **Working Tree Sanitization**:
-  - `README.md`, `frontend/.env.example`, and `.env.example` were scrubbed of all key strings.
-  - Active keys are loaded from gitignored `frontend/.env.local` (`VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAP_ID`).
-  - Pre-commit check verified: `git grep -n "AIza"` returned **0 matches** across all tracked and untracked files.
+  - `README.md`, `frontend/.env.example`, and `.env.example` scrubbed of all key strings.
+  - Active keys loaded only from gitignored `frontend/.env.local`.
+  - Secret scan check verified: 0 new secrets in diff or working tree.
 
 ---
 
-## 3. Data Integrity & Cadastral Preservation
-- **Saved Farmer Data Untouched**: The baseline JSON dump `baseline/farmer-data-before.json` (SHA256: `525172C2AF0305FC213C558C30DED126C03098B06114ECB48D6207EE79CA4C14`) proves stored farm geometries, crop zones, devices, and metadata were not migrated, re-seeded, or altered.
+## 5. Data Integrity & Cadastral Preservation
+- **Saved Farmer Data Untouched**: The baseline JSON dump `baseline/farmer-data-before.json` (SHA256: `525172C2AF0305FC213C558C30DED126C03098B06114ECB48D6207EE79CA4C14`) confirms stored farm geometries, crop zones, devices, and metadata were not migrated, re-seeded, or altered.
 - **Stored Coordinate Format**: Stored GeoJSON `[lng, lat]` coordinates are strictly preserved. Conversion to Google `{lat, lng}` occurs only in runtime adapters (`mapAdapters.js`).
-- **Cadastral Area Mismatch Analysis**:
+- **Cadastral Area Mismatch Resolution**:
   - **Farm 1 (Ganesh V.)**: Registered = 21.4 acres (8.66 ha) vs. Mapped = 76.9 acres (31.12 ha) (+259.3% mismatch).
-  - **Farm 2 (Kishore S.)**: Registered = 16.8 acres (6.8 ha) vs. Mapped = 59.58 acres (24.11 ha) (+254.6% mismatch).
-  - **Farm 3 (Vignesh R.)**: Registered = 26.5 acres (10.72 ha) vs. Mapped = 93.18 acres (37.71 ha) (+251.6% mismatch).
-  - **Farm 4 (Ravi Kumar)**: Registered = 18.5 acres (7.49 ha) vs. Mapped = 78.53 acres (31.78 ha) (+324.5% mismatch).
-  - **Resolution**: Both values are shown side-by-side in Admin Land & Boundary Studio with an amber **"Area mismatch: review boundary"** warning card and a non-destructive cadastral explanation dialog. The farmer portal explicitly displays the legal registered 21.4 acres.
+  - **Resolution**: Both values are displayed side-by-side in Admin Land & Boundary Studio with an amber **"Area mismatch: review boundary"** warning card and a non-destructive cadastral explanation dialog. The farmer portal explicitly displays the legal registered 21.4 acres.
 
 ---
 
-## 4. Key Architectural Components
+## 6. Key Architectural Components
 
 ### A. Core Map Engine (`src/components/map/`)
 - `AgriMap.jsx`: Central unified map loaded across all portals. Encapsulates singleton Google Maps loader, vector markers, layer chips, legend, and diagnostics modals.
@@ -48,20 +88,26 @@ This branch (`feat/shared-google-map-and-requests`) delivers **ONE shared, premi
 
 ---
 
-## 5. Verification & Test Suite Results
-All unit test suites executed with **100% pass rate (30 passed, 0 failed)**:
-- `node src/lib/coordinateParser.test.js`: 9 passed
-- `node src/lib/mapPermissions.test.js`: 7 passed
-- `node src/components/map/mapAdapters.test.js`: 6 passed
-- `node src/lib/changeRequestStorage.test.js`: 8 passed
-- `npm run build`: Production bundle compiled cleanly in 6.29s with 0 errors.
+## 7. Verification & Test Suite Results
+All unit test suites executed with **100% pass rate (39 assertions passed, 0 failed)**:
+- `mapAdapters.test.js`: 6 passed
+- `mapErrorAndStyling.test.js`: 8 passed
+- `changeRequestStorage.test.js`: 8 passed
+- `coordinateParser.test.js`: 10 passed
+- `mapPermissions.test.js`: 7 passed
+- `authIntegration.test.js`: 4 passed
+- `npm run build`: Production bundle compiled cleanly in 7.14s with 0 errors.
 
 ---
 
-## 6. Screenshots & Visual Artifacts
-Verified in browser across Farmer, Admin Requests, and Admin Land & Boundary Studio:
-- Farmer Dashboard: `farmer_dashboard_1792585465424.png`
-- Farmer Change Request Modal: `farmer_change_request_modal_1792585511285.png`
-- Farmer Requests Drawer: `farmer_requests_drawer_1792585558188.png`
-- Admin Requests Inbox: `admin_requests_inbox_1792585706842.png`
-- Admin Land & Boundary Studio (Area Mismatch): `boundary_view_tab_1792585963526.png`
+## 8. Known Issues
+- **Cadastral Area Variance**: Legal registered land area differs from satellite polygon area for demo farms; handled gracefully by presenting both metrics with an amber advisory.
+- **Historical Git Commits**: Commits `7ccc33d`, `cd347dc`, and `9bcd346` contain the legacy API key. Key is revoked and rotated in Google Cloud.
+
+---
+
+## 9. Rules for Teammates
+- **No Force Push**: Never run `git push --force` or rewrite history.
+- **Branch Workflow**: Do not commit directly to `main`. Create feature/update branches and open PRs for review.
+- **Credential Hygiene**: Never commit API keys, tokens, or credentials into repository files.
+- **Data Preservation**: Stored farm GeoJSON data must not be mutated or wiped.
