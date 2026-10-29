@@ -40,7 +40,7 @@ npm run dev
 
 ## 3. Environment Variable Names Only
 
-Place local secrets in `.env.local` (never commit real values):
+Place local configuration in `.env.local` (real API keys and tokens are distributed privately by the team lead):
 - `VITE_GOOGLE_MAPS_API_KEY`: Google Maps JavaScript API key with Maps, Marker, Geometry, and Places libraries enabled.
 - `VITE_GOOGLE_MAP_ID`: Vector / Advanced Marker Map ID.
 - `VITE_API_URL`: Backend API base URL (defaults to `http://localhost:8000`).
@@ -107,7 +107,13 @@ All unit test suites executed with **100% pass rate (39 assertions passed, 0 fai
 ---
 
 ## 9. Rules for Teammates
-- **No Force Push**: Never run `git push --force` or rewrite history.
-- **Branch Workflow**: Do not commit directly to `main`. Create feature/update branches and open PRs for review.
-- **Credential Hygiene**: Never commit API keys, tokens, or credentials into repository files.
-- **Data Preservation**: Stored farm GeoJSON data must not be mutated or wiped.
+- **Feature Branches**: Always branch off `<BASE>` (`main`) using `feature/...` or `update/...`; never commit directly to `main`.
+- **Small, Focused PRs**: Keep PRs logical, scoped, and well-described.
+- **Credential Hygiene**: Never commit `.env` files, passwords, tokens, or API keys into repository files.
+- **Preserve Others' Work**: Do not delete files or components you did not create.
+- **Data Preservation**: Stored farm GeoJSON data must not be mutated, truncated, or wiped.
+
+---
+
+## 10. Key Flow to Test
+- **Farmer Change Request Lifecycle**: Log in as a Farmer (`farmer@v2vtech.com` / `farmer123`), navigate to Farmland Digital Twin (`/farmer`), open the Change Request Modal to submit a boundary or device change, then log in as Admin (`admin@v2vtech.com` / `admin123`) and verify the request appears in the Admin Requests Inbox (`/admin/requests`) with full review details.
