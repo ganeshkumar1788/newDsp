@@ -1,9 +1,9 @@
 # V2V AgriMap DSP — Implementation & Handoff Report
 
 - **Date**: 2026-10-29
+- **Repository**: `https://github.com/KishoreKumar0407/DSP--1.git`
 - **Branch**: `update/2026-10-29-agrimap-integration`
-- **Base Branch**: `main`
-- **Compare / PR URL**: https://github.com/KishoreKumar0407/newDsp/compare/main...update/2026-10-29-agrimap-integration
+- **Compare / PR URL**: https://github.com/KishoreKumar0407/DSP--1/compare/main...update/2026-10-29-agrimap-integration
 - **Status**: Not merged — needs teammate review
 
 ---
@@ -18,21 +18,23 @@ This branch consolidates and finalizes the complete **V2V AgriMap DSP Platform**
 
 ---
 
-## 2. How to Get and Run It
+## 2. How Teammates Can Get and Run It Directly from the Repo
 
-To pull and run this work locally:
+Because the branch is pushed directly into `https://github.com/KishoreKumar0407/DSP--1.git`, teammates only need standard commands:
 
 ```powershell
-# 1. Fetch latest refs and checkout branch
+# 1. Fetch latest branches directly from the main repository
 git fetch origin
+
+# 2. Checkout the update branch
 git checkout update/2026-10-29-agrimap-integration
 
-# 2. Install dependencies & run frontend tests
+# 3. Install dependencies & run frontend tests
 cd frontend
 npm install
 npm test
 
-# 3. Start the development server
+# 4. Start the development server
 npm run dev
 ```
 
